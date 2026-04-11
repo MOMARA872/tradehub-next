@@ -926,7 +926,7 @@ async function seedUsers(): Promise<Record<string, string>> {
               trust_score: user.trustScore,
               response_rate: user.responseRate,
               listing_count: user.listingCount,
-              joined_at: user.joinedAt,
+              created_at: user.joinedAt,
             });
 
           if (profileError) {
@@ -962,7 +962,7 @@ async function seedUsers(): Promise<Record<string, string>> {
         trust_score: user.trustScore,
         response_rate: user.responseRate,
         listing_count: user.listingCount,
-        joined_at: user.joinedAt,
+        created_at: user.joinedAt,
       });
 
     if (profileError) {
