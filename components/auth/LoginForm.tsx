@@ -10,11 +10,12 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") || "/";
+  const urlError = searchParams.get("message") || (searchParams.get("error") ? "Authentication failed. Please try again." : "");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(urlError);
 
   const supabase = createClient();
 
