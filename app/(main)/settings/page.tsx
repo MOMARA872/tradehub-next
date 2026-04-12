@@ -8,6 +8,7 @@ import { REGIONS } from "@/lib/data/regions";
 import { SUPPORTED_LANGUAGES, type LangCode } from "@/i18n";
 import { Sun, Moon, Palette, Globe, MapPin, Check } from "lucide-react";
 import Link from "next/link";
+import { SubscriptionSection } from "@/components/settings/SubscriptionSection";
 
 const THEMES = [
   { id: "warm", label: "Warm", icon: Palette, colors: ["#D4603A", "#FBF7F4", "#F3EDE8"] },
@@ -119,6 +120,9 @@ export default function SettingsPage() {
           })}
         </div>
       </section>
+
+      {/* Subscription */}
+      {currentUser && <SubscriptionSection user={currentUser} />}
 
       {/* Account Info */}
       {isLoggedIn && currentUser && (

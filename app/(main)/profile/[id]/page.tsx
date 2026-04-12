@@ -1,10 +1,12 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { createClient } from "@/lib/supabase/client";
 import type { User, Listing } from "@/lib/types";
+import { dbProfileToUser, dbListingToListing } from "@/lib/types";
 import { REVIEWS } from "@/lib/data/reviews";
 import { useAuth } from "@/hooks/useAuth";
 import { UserAvatar } from "@/components/user/UserAvatar";
@@ -40,13 +42,45 @@ export default function ProfilePage() {
   const params = useParams();
   const userId = params.id as string;
   const { currentUser } = useAuth();
+  const supabase = createClient();
   const [activeTab, setActiveTab] = useState<"listings" | "reviews">("listings");
+  const [user, setUser] = useState<User | null>(null);
+  const [userListings, setUserListings] = useState<Listing[]>([]);
+  const [profileLoading, setProfileLoading] = useState(true);
 
-  // TODO: Replace with Supabase query for profile and listings
-  const LISTINGS: Listing[] = [];
+  useEffect(() => {
+    let mounted = true;
 
-  // For own profile, use currentUser. For others, show not found (TODO: fetch from Supabase).
-  const user: User | null = currentUser?.id === userId ? currentUser : null;
+    async function loadProfile() {
+      const [{ data: profile }, { data: listings }] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", userId).single(),
+        supabase
+          .from("listings")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("status", "active")
+          .order("created_at", { ascending: false }),
+      ]);
+
+      if (!mounted) return;
+
+      setUser(profile ? dbProfileToUser(profile) : null);
+      setUserListings((listings ?? []).map(dbListingToListing));
+      setProfileLoading(false);
+    }
+
+    loadProfile();
+    return () => { mounted = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  if (profileLoading) {
+    return (
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 flex justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted" />
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -57,7 +91,6 @@ export default function ProfilePage() {
   }
 
   const isOwnProfile = currentUser?.id === user.id;
-  const userListings = LISTINGS.filter((l) => l.userId === user.id);
   const userReviews = REVIEWS.filter((r) => r.revieweeId === user.id);
 
   return (
@@ -78,7 +111,12 @@ export default function ProfilePage() {
             <h1 className="font-heading font-bold text-xl text-foreground flex items-center gap-2">
               {user.displayName}
               {user.isVerified && (
-                <CheckCircle className="h-5 w-5 text-success" />
+                <span className="inline-flex items-center gap-1">
+                  <CheckCircle className="h-5 w-5 text-success" />
+                  <span className="text-[10px] font-semibold bg-brand/10 text-brand px-1.5 py-0.5 rounded-full">
+                    PRO
+                  </span>
+                </span>
               )}
             </h1>
             <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted">
@@ -314,12 +352,15 @@ function EditProfileButton({ user }: { user: User }) {
           : trimmedName.slice(0, 2).toUpperCase();
       }
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
         .update(updates)
-        .eq("id", user.id);
+        .eq("id", user.id)
+        .select()
+        .single();
 
       if (error) throw new Error(error.message);
+      if (!data) throw new Error("Update failed — please try again");
 
       setOpen(false);
       window.location.reload();

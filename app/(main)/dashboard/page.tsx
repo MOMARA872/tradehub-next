@@ -14,6 +14,7 @@ import {
   MapPin,
 } from "lucide-react";
 import Link from "next/link";
+import { UpgradeBanner } from "@/components/dashboard/UpgradeBanner";
 
 export default function DashboardPage() {
   const { currentUser, isLoggedIn } = useAuth();
@@ -105,6 +106,9 @@ export default function DashboardPage() {
           </Link>
         </div>
       )}
+
+      {/* Upgrade Banner */}
+      {currentUser.tier !== "pro" && <UpgradeBanner />}
 
       {/* Welcome Header */}
       <div className="bg-card border border-border rounded-[var(--radius-md)] p-6 mb-8">

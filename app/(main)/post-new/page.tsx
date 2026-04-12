@@ -3,6 +3,7 @@
 import { CONDITIONS } from "@/lib/data/conditions";
 import { REGIONS } from "@/lib/data/regions";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { PhotoUpload } from "@/components/listing/PhotoUpload";
 import { formatPrice } from "@/lib/helpers/format";
 import {
@@ -12,25 +13,10 @@ import {
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
-import dynamicImport from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import type { ConditionKey, Category } from "@/lib/types";
-import type { PickedLocation } from "@/components/map/LocationPicker";
 import { toast } from "sonner";
-
-// Leaflet-based picker — dynamic import to avoid SSR (touches `window`).
-const LocationPicker = dynamicImport(
-  () => import("@/components/map/LocationPicker").then((m) => m.LocationPicker),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-[340px] bg-surface2 rounded-[var(--radius-md)] flex items-center justify-center border border-border">
-        <Loader2 className="h-5 w-5 text-muted animate-spin" />
-      </div>
-    ),
-  },
-);
 
 const STEPS = [
   { number: 1, label: "Category" },
@@ -100,6 +86,7 @@ function PostNewWizard() {
 
   const preselectedCategory = searchParams.get("category") || "";
 
+  const { currentUser } = useAuth();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -126,7 +113,6 @@ function PostNewWizard() {
   const [priceType, setPriceType] = useState("fixed");
   const [price, setPrice] = useState<number>(0);
   const [city, setCity] = useState("");
-  const [location, setLocation] = useState<PickedLocation | null>(null);
 
   const tags = tagsInput
     .split(",")
@@ -194,12 +180,6 @@ function PostNewWizard() {
         return false;
       }
     }
-    if (currentStep === 4) {
-      if (!location) {
-        setError("Please set a location for your listing.");
-        return false;
-      }
-    }
     return true;
   }
 
@@ -233,10 +213,11 @@ function PostNewWizard() {
       const resolvedSubcategory =
         selectedSubcategory === "__other__" ? customSubcategory.trim() : selectedSubcategory;
 
-      if (!location) {
-        setError("Please set a location for your listing.");
-        return;
-      }
+      // Derive lat/lng from the selected city region + small jitter so
+      // listings don't stack on exact city center.
+      const selectedCity = citiesFiltered.find((r) => r.id === city);
+      const jitterLat = (Math.random() - 0.5) * 0.04;
+      const jitterLng = (Math.random() - 0.5) * 0.04;
 
       const { data, error: insertError } = await supabase
         .from("listings")
@@ -251,9 +232,9 @@ function PostNewWizard() {
           condition: (condition || "good") as ConditionKey,
           condition_notes: conditionNotes.trim(),
           city: city || "Prescott, AZ",
-          lat: location.lat,
-          lng: location.lng,
-          location_confirmed: true,
+          lat: selectedCity ? selectedCity.lat + jitterLat : null,
+          lng: selectedCity ? selectedCity.lng + jitterLng : null,
+          location_confirmed: false,
           photos: photos.length > 0 ? photos : [],
           tags: tagsInput.split(",").map((t) => t.trim()).filter(Boolean),
         })
@@ -534,7 +515,16 @@ function PostNewWizard() {
               Price Type
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {PRICE_TYPES.map((pt) => (
+              {PRICE_TYPES.filter((pt) => {
+                if (pt.value === "fixed") {
+                  return (
+                    currentUser?.tier === "pro" &&
+                    (currentUser?.subscriptionStatus === "active" ||
+                      currentUser?.subscriptionStatus === "trialing")
+                  );
+                }
+                return true;
+              }).map((pt) => (
                 <button
                   key={pt.value}
                   type="button"
@@ -586,21 +576,6 @@ function PostNewWizard() {
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              Exact Location <span className="text-brand">*</span>
-            </label>
-            <LocationPicker
-              value={location}
-              onChange={setLocation}
-              initialCenter={
-                cityData ? { lat: cityData.lat, lng: cityData.lng } : undefined
-              }
-            />
-            <p className="text-xs text-subtle mt-2">
-              We&apos;ll show buyers a fuzzed location within ~500m for your privacy.
-            </p>
-          </div>
         </div>
       )}
 
