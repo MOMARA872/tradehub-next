@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { formatPrice } from "@/lib/helpers/format";
+import { createNotification } from "@/lib/helpers/notifications";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogTrigger,
@@ -51,12 +53,27 @@ export function OfferButton({ listing }: { listing: ListingSnippet }) {
 
   async function handleSendOffer() {
     if (!currentUserId || !offerAmount) return;
-    await supabase.from("offers").insert({
+    const { error } = await supabase.from("offers").insert({
       listing_id: listing.id,
       buyer_id: currentUserId,
       offer_amount: parseFloat(offerAmount),
       message: offerMessage,
     });
+    if (error) {
+      toast.error("Failed to send offer");
+      return;
+    }
+    // Notify the seller
+    await createNotification({
+      supabase,
+      userId: listing.user_id,
+      type: "offer_received",
+      icon: "💰",
+      title: `New offer: $${parseFloat(offerAmount).toFixed(2)}`,
+      body: `Someone made an offer on "${listing.title}"`,
+      link: "/offers",
+    });
+    toast.success("Offer sent!");
     window.location.reload();
   }
 

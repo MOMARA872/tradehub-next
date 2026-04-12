@@ -26,6 +26,9 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useI18n } from "@/hooks/useI18n";
 import { UserAvatar } from "@/components/user/UserAvatar";
+import { dbNotificationToNotification } from "@/lib/types";
+import type { Notification } from "@/lib/types";
+import { timeAgo } from "@/lib/helpers/format";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -54,9 +57,12 @@ export function Navbar() {
   const [regionOpen, setRegionOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifOpen, setNotifOpen] = useState(false);
   const regionRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   // Supabase auth state
   useEffect(() => {
@@ -81,25 +87,31 @@ export function Navbar() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch unread message count + poll every 5 seconds
+  // Fetch notifications + poll every 5 seconds
   useEffect(() => {
     if (!user) {
-      setUnreadMessages(0);
+      setUnreadCount(0);
+      setNotifications([]);
       return;
     }
 
-    async function fetchUnread() {
-      const [{ data: buyerThreads }, { data: sellerThreads }] = await Promise.all([
-        supabase.from("threads").select("buyer_unread").eq("buyer_id", user.id),
-        supabase.from("threads").select("seller_unread").eq("seller_id", user.id),
-      ]);
-      const buyerTotal = (buyerThreads ?? []).reduce((sum: number, t: any) => sum + (t.buyer_unread || 0), 0);
-      const sellerTotal = (sellerThreads ?? []).reduce((sum: number, t: any) => sum + (t.seller_unread || 0), 0);
-      setUnreadMessages(buyerTotal + sellerTotal);
+    async function fetchNotifications() {
+      const { data: rows } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (rows) {
+        const notifList = rows.map(dbNotificationToNotification);
+        setNotifications(notifList);
+        setUnreadCount(notifList.filter((n) => !n.read).length);
+      }
     }
 
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 5000);
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 5000);
 
     return () => clearInterval(interval);
   }, [user]);
@@ -113,6 +125,9 @@ export function Navbar() {
       if (userRef.current && !userRef.current.contains(e.target as Node)) {
         setUserMenuOpen(false);
       }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
     }
     document.addEventListener("click", handleClick);
     return () => document.removeEventListener("click", handleClick);
@@ -123,6 +138,17 @@ export function Navbar() {
     setUserMenuOpen(false);
     router.push('/');
     router.refresh();
+  }
+
+  async function markAllRead() {
+    if (!user) return;
+    await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("user_id", user.id)
+      .eq("read", false);
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setUnreadCount(0);
   }
 
   function handleSearch(e: React.FormEvent) {
@@ -212,14 +238,75 @@ export function Navbar() {
         {/* Notification + Auth */}
         <div className="flex items-center gap-2">
           {!!user && (
-            <Link href="/messages" className="relative text-muted hover:text-foreground transition-colors">
-              <Bell className="h-4.5 w-4.5" />
-              {unreadMessages > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 h-4 min-w-[16px] px-1 flex items-center justify-center rounded-full bg-brand text-white text-[9px] font-bold leading-none">
-                  {unreadMessages > 99 ? "99+" : unreadMessages}
-                </span>
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => setNotifOpen(!notifOpen)}
+                className="relative text-muted hover:text-foreground transition-colors"
+              >
+                <Bell className="h-4.5 w-4.5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 h-4 min-w-[16px] px-1 flex items-center justify-center rounded-full bg-brand text-white text-[9px] font-bold leading-none">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </button>
+              {notifOpen && (
+                <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-lg shadow-lg w-80 max-h-[400px] z-50 animate-fade-in overflow-hidden flex flex-col">
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                    <p className="text-sm font-semibold text-foreground">Notifications</p>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={markAllRead}
+                        className="text-[10px] text-brand hover:underline"
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex-1 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="py-8 text-center">
+                        <p className="text-xs text-muted">No notifications yet</p>
+                      </div>
+                    ) : (
+                      notifications.map((n) => (
+                        <Link
+                          key={n.id}
+                          href={n.link}
+                          onClick={() => {
+                            setNotifOpen(false);
+                            if (!n.read) {
+                              supabase.from("notifications").update({ read: true }).eq("id", n.id).then();
+                              setNotifications((prev) =>
+                                prev.map((x) => (x.id === n.id ? { ...x, read: true } : x))
+                              );
+                              setUnreadCount((prev) => Math.max(0, prev - 1));
+                            }
+                          }}
+                          className={`flex items-start gap-2.5 px-3 py-2.5 border-b border-border transition-colors hover:bg-surface2 ${
+                            !n.read ? "bg-brand/5" : ""
+                          }`}
+                        >
+                          <span className="text-base mt-0.5 shrink-0">{n.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-xs leading-relaxed ${!n.read ? "text-foreground font-medium" : "text-muted"}`}>
+                              {n.title}
+                            </p>
+                            {n.body && (
+                              <p className="text-[10px] text-subtle mt-0.5 truncate">{n.body}</p>
+                            )}
+                            <p className="text-[10px] text-subtle mt-0.5">{timeAgo(n.createdAt)}</p>
+                          </div>
+                          {!n.read && (
+                            <span className="h-2 w-2 rounded-full bg-brand shrink-0 mt-1.5" />
+                          )}
+                        </Link>
+                      ))
+                    )}
+                  </div>
+                </div>
               )}
-            </Link>
+            </div>
           )}
 
           {!!user && profile ? (

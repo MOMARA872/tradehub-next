@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { MessageSquare, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { createNotification } from "@/lib/helpers/notifications";
 
 interface Props {
   listingId: string;
@@ -63,6 +64,17 @@ export function MessageSellerButton({ listingId, sellerId, listingTitle }: Props
         toast.error("Could not start conversation. Please try again.");
         return;
       }
+
+      // Notify the seller
+      await createNotification({
+        supabase,
+        userId: sellerId,
+        type: "new_message_thread",
+        icon: "💬",
+        title: "New message",
+        body: `Someone wants to chat about "${listingTitle}"`,
+        link: `/messages?thread=${newThread.id}`,
+      });
 
       router.push(`/messages?thread=${newThread.id}`);
     } finally {

@@ -111,6 +111,14 @@ function MessagesInner() {
       setMessages((rows ?? []).map(dbMessageToMessage));
       setLoadingMessages(false);
 
+      // Mark received messages as read
+      const unreadIds = (rows ?? [])
+        .filter((m: { is_read: boolean; sender_id: string }) => !m.is_read && m.sender_id !== currentUser.id)
+        .map((m: { id: string }) => m.id);
+      if (unreadIds.length > 0) {
+        supabase.from("messages").update({ is_read: true }).in("id", unreadIds).then();
+      }
+
       // Reset unread counter for current user
       const thread = threadsRef.current.find((t) => t.id === threadId);
       if (thread) {
@@ -149,13 +157,26 @@ function MessagesInner() {
         .order("sent_at", { ascending: true });
 
       if (rows) {
+        // Mark any new incoming messages as read
+        const unreadIds = rows
+          .filter((m: { is_read: boolean; sender_id: string }) => !m.is_read && m.sender_id !== currentUser.id)
+          .map((m: { id: string }) => m.id);
+        if (unreadIds.length > 0) {
+          supabase.from("messages").update({ is_read: true }).in("id", unreadIds).then();
+        }
+
         setMessages((prev) => {
           const newMessages = rows.map(dbMessageToMessage);
-          // Only update if there are actually new messages
+          // Update if message count changed, last message changed, or read status changed
           if (newMessages.length !== prev.length) return newMessages;
           const lastNew = newMessages[newMessages.length - 1];
           const lastOld = prev[prev.length - 1];
           if (lastNew && lastOld && lastNew.id !== lastOld.id) return newMessages;
+          // Check if any read status changed (for sent messages marked as read by recipient)
+          const readChanged = newMessages.some(
+            (m, i) => prev[i] && m.isRead !== prev[i].isRead
+          );
+          if (readChanged) return newMessages;
           return prev;
         });
       }
@@ -471,6 +492,9 @@ function MessagesInner() {
                               }`}
                             >
                               {timeAgo(msg.sentAt)}
+                              {isOwn && msg.isRead && (
+                                <span className="ml-1.5 text-success">Read</span>
+                              )}
                             </p>
                           </div>
                         </div>

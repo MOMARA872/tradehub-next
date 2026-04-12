@@ -137,14 +137,44 @@ export interface TradeChain {
   steps: TradeChainStep[];
 }
 
+export type NotificationType = 'offer_received' | 'offer_accepted' | 'offer_declined' | 'offer_countered' | 'new_message_thread' | 'new_message' | 'review_received';
+
 export interface Notification {
   id: string;
   userId: string;
+  type: NotificationType;
   icon: string;
-  text: string;
+  title: string;
+  body: string;
   link: string;
   read: boolean;
   createdAt: string;
+}
+
+export interface DbNotification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  icon: string;
+  title: string;
+  body: string;
+  link: string;
+  read: boolean;
+  created_at: string;
+}
+
+export function dbNotificationToNotification(n: DbNotification): Notification {
+  return {
+    id: n.id,
+    userId: n.user_id,
+    type: n.type,
+    icon: n.icon,
+    title: n.title,
+    body: n.body,
+    link: n.link,
+    read: n.read,
+    createdAt: n.created_at,
+  };
 }
 
 export interface SearchFilters {
