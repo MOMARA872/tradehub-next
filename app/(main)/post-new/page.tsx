@@ -113,6 +113,7 @@ function PostNewWizard() {
   const [priceType, setPriceType] = useState("fixed");
   const [price, setPrice] = useState<number>(0);
   const [city, setCity] = useState("");
+  const [zipCode, setZipCode] = useState("");
 
   const tags = tagsInput
     .split(",")
@@ -232,6 +233,7 @@ function PostNewWizard() {
           condition: (condition || "good") as ConditionKey,
           condition_notes: conditionNotes.trim(),
           city: city || "Prescott, AZ",
+          zip_code: zipCode.trim(),
           lat: selectedCity ? selectedCity.lat + jitterLat : null,
           lng: selectedCity ? selectedCity.lng + jitterLng : null,
           location_confirmed: false,
@@ -574,6 +576,19 @@ function PostNewWizard() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">
+              Zip Code (optional)
+            </label>
+            <input
+              type="text"
+              value={zipCode}
+              onChange={(e) => setZipCode(e.target.value.replace(/[^0-9-]/g, "").slice(0, 10))}
+              placeholder="e.g. 86301"
+              className="w-full px-4 py-2.5 rounded-[var(--radius-md)] border border-border bg-surface text-foreground text-sm placeholder:text-subtle focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand"
+            />
           </div>
 
         </div>

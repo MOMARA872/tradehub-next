@@ -61,6 +61,7 @@ export interface Listing {
   condition: ConditionKey;
   conditionNotes: string;
   city: string;
+  zipCode: string;
   lat: number | null;
   lng: number | null;
   locationConfirmed: boolean;
@@ -223,6 +224,7 @@ export interface DbListing {
   condition: ConditionKey;
   condition_notes: string;
   city: string;
+  zip_code: string;
   lat: number | null;
   lng: number | null;
   location_confirmed: boolean;
@@ -279,6 +281,7 @@ export function dbListingToListing(l: DbListing): Listing {
     condition: l.condition,
     conditionNotes: l.condition_notes,
     city: l.city,
+    zipCode: l.zip_code ?? "",
     lat: l.lat === null || l.lat === undefined ? null : Number(l.lat),
     lng: l.lng === null || l.lng === undefined ? null : Number(l.lng),
     locationConfirmed: l.location_confirmed ?? false,
