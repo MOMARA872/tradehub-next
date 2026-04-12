@@ -42,6 +42,9 @@ export interface User {
   responseRate: number;
   listingCount: number;
   lastDisplayNameEditAt: string | null;
+  tier: "free" | "pro";
+  subscriptionStatus: "none" | "trialing" | "active" | "past_due" | "canceled";
+  trialEndsAt: string | null;
 }
 
 export type PriceType = 'fixed' | 'free' | 'trade' | 'negotiable';
@@ -201,6 +204,11 @@ export interface DbProfile {
   listing_count: number;
   created_at: string;
   last_display_name_edit_at: string | null;
+  tier: string;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  subscription_status: string;
+  trial_ends_at: string | null;
 }
 
 export interface DbListing {
@@ -252,6 +260,9 @@ export function dbProfileToUser(p: DbProfile): User {
     responseRate: p.response_rate,
     listingCount: p.listing_count,
     lastDisplayNameEditAt: p.last_display_name_edit_at ?? null,
+    tier: (p.tier as User["tier"]) || "free",
+    subscriptionStatus: (p.subscription_status as User["subscriptionStatus"]) || "none",
+    trialEndsAt: p.trial_ends_at ?? null,
   };
 }
 
