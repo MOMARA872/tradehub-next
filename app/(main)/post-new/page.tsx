@@ -12,9 +12,25 @@ import {
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
+import dynamicImport from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import type { ConditionKey, Category } from "@/lib/types";
+import type { PickedLocation } from "@/components/map/LocationPicker";
+import { toast } from "sonner";
+
+// Leaflet-based picker — dynamic import to avoid SSR (touches `window`).
+const LocationPicker = dynamicImport(
+  () => import("@/components/map/LocationPicker").then((m) => m.LocationPicker),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[340px] bg-surface2 rounded-[var(--radius-md)] flex items-center justify-center border border-border">
+        <Loader2 className="h-5 w-5 text-muted animate-spin" />
+      </div>
+    ),
+  },
+);
 
 const STEPS = [
   { number: 1, label: "Category" },
@@ -110,6 +126,7 @@ function PostNewWizard() {
   const [priceType, setPriceType] = useState("fixed");
   const [price, setPrice] = useState<number>(0);
   const [city, setCity] = useState("");
+  const [location, setLocation] = useState<PickedLocation | null>(null);
 
   const tags = tagsInput
     .split(",")
@@ -177,6 +194,12 @@ function PostNewWizard() {
         return false;
       }
     }
+    if (currentStep === 4) {
+      if (!location) {
+        setError("Please set a location for your listing.");
+        return false;
+      }
+    }
     return true;
   }
 
@@ -198,42 +221,55 @@ function PostNewWizard() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
+    setError("");
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/login");
+        return;
+      }
 
-    const resolvedSubcategory =
-      selectedSubcategory === "__other__" ? customSubcategory.trim() : selectedSubcategory;
+      const resolvedSubcategory =
+        selectedSubcategory === "__other__" ? customSubcategory.trim() : selectedSubcategory;
 
-    const { data, error: insertError } = await supabase
-      .from("listings")
-      .insert({
-        user_id: user.id,
-        category_id: selectedCategory,
-        subcategory: resolvedSubcategory,
-        title: title.trim(),
-        description: description.trim(),
-        price: priceType === "free" || priceType === "trade" ? 0 : parseFloat(String(price)) || 0,
-        price_type: priceType,
-        condition: (condition || "good") as ConditionKey,
-        condition_notes: conditionNotes.trim(),
-        city: city || "Prescott, AZ",
-        photos: photos.length > 0 ? photos : [],
-        tags: tagsInput.split(",").map((t) => t.trim()).filter(Boolean),
-      })
-      .select("id")
-      .single();
+      if (!location) {
+        setError("Please set a location for your listing.");
+        return;
+      }
 
-    if (insertError) {
-      setError(insertError.message);
+      const { data, error: insertError } = await supabase
+        .from("listings")
+        .insert({
+          user_id: user.id,
+          category_id: selectedCategory,
+          subcategory: resolvedSubcategory,
+          title: title.trim(),
+          description: description.trim(),
+          price: priceType === "free" || priceType === "trade" ? 0 : parseFloat(String(price)) || 0,
+          price_type: priceType,
+          condition: (condition || "good") as ConditionKey,
+          condition_notes: conditionNotes.trim(),
+          city: city || "Prescott, AZ",
+          lat: location.lat,
+          lng: location.lng,
+          location_confirmed: true,
+          photos: photos.length > 0 ? photos : [],
+          tags: tagsInput.split(",").map((t) => t.trim()).filter(Boolean),
+        })
+        .select("id")
+        .single();
+
+      if (insertError || !data) {
+        setError(insertError?.message ?? "Failed to create listing. Please try again.");
+        return;
+      }
+
+      toast.success("Listing posted!", { description: "Redirecting to your listing..." });
+      router.push(`/listing/${data.id}`);
+    } finally {
       setSubmitting(false);
-      return;
     }
-
-    router.push(`/listing/${data.id}`);
   }
 
   if (authLoading) {
@@ -548,6 +584,22 @@ function PostNewWizard() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">
+              Exact Location <span className="text-brand">*</span>
+            </label>
+            <LocationPicker
+              value={location}
+              onChange={setLocation}
+              initialCenter={
+                cityData ? { lat: cityData.lat, lng: cityData.lng } : undefined
+              }
+            />
+            <p className="text-xs text-subtle mt-2">
+              We&apos;ll show buyers a fuzzed location within ~500m for your privacy.
+            </p>
           </div>
         </div>
       )}

@@ -75,7 +75,7 @@ export function PhotoUpload({ userId, photos, onPhotosChange, maxPhotos = 6 }: P
       <div className="grid grid-cols-3 gap-2 mb-2">
         {photos.map((url, i) => (
           <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-border">
-            <Image src={url} alt={`Photo ${i + 1}`} fill className="object-cover" sizes="120px" />
+            <Image src={url} alt={`Photo ${i + 1}`} fill unoptimized className="object-cover" sizes="120px" />
             <button
               type="button"
               onClick={() => removePhoto(i)}

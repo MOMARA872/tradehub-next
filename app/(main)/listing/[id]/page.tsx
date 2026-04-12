@@ -12,15 +12,19 @@ import { ListingCard } from "@/components/listing/ListingCard";
 import { EmptyState } from "@/components/common/EmptyState";
 import { PhotoGallery } from "@/components/listing/PhotoGallery";
 import { OfferButton } from "@/components/listing/OfferButton";
+import { MessageSellerButton } from "@/components/listing/MessageSellerButton";
 import {
   ArrowLeft,
   MapPin,
   Calendar,
   Eye,
   Tag,
-  MessageSquare,
+
   Shield,
   CheckCircle,
+  Heart,
+  Flag,
+  Share2,
 } from "lucide-react";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -141,7 +145,6 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           <div className="flex flex-wrap gap-4 text-xs text-muted">
             <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {listing.city}</span>
             <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {formatDate(listing.createdAt)}</span>
-            <span className="flex items-center gap-1"><Eye className="h-3.5 w-3.5" /> {listingRow.views_count ?? 0} views</span>
             {category && (
               <span className="flex items-center gap-1"><Tag className="h-3.5 w-3.5" /> {category.name} &rsaquo; {listing.subcategory}</span>
             )}
@@ -168,6 +171,40 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               ))}
             </div>
           )}
+
+          {/* Post metadata footer (Craigslist-style) */}
+          <div className="border-t border-border pt-4 text-xs text-muted">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+              <dt className="text-subtle">listing id:</dt>
+              <dd className="text-foreground font-mono">{listing.id.slice(0, 8)}</dd>
+              <dt className="text-subtle">posted:</dt>
+              <dd className="text-foreground">{formatDate(listing.createdAt)}</dd>
+              <dt className="text-subtle">views:</dt>
+              <dd className="text-foreground flex items-center gap-1">
+                <Eye className="h-3.5 w-3.5" /> {listingRow.views_count ?? 0}
+              </dd>
+            </dl>
+            <div className="flex items-center gap-5 mt-4">
+              <button
+                type="button"
+                className="flex items-center gap-1.5 hover:text-brand transition-colors"
+              >
+                <Heart className="h-3.5 w-3.5" /> save
+              </button>
+              <button
+                type="button"
+                className="flex items-center gap-1.5 hover:text-brand transition-colors"
+              >
+                <Flag className="h-3.5 w-3.5" /> report
+              </button>
+              <button
+                type="button"
+                className="flex items-center gap-1.5 hover:text-brand transition-colors"
+              >
+                <Share2 className="h-3.5 w-3.5" /> share
+              </button>
+            </div>
+          </div>
 
           {offers.length > 0 && (
             <div>
@@ -257,10 +294,11 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               {formatPrice(listing.price, listing.priceType)}
             </p>
             <OfferButton listing={listingRow} />
-            <button className="w-full flex items-center justify-center gap-2 border border-border text-foreground text-sm font-medium py-2.5 rounded-lg hover:bg-surface2 transition-colors">
-              <MessageSquare className="h-4 w-4" />
-              Message Seller
-            </button>
+            <MessageSellerButton
+              listingId={listing.id}
+              sellerId={listing.userId}
+              listingTitle={listing.title}
+            />
           </div>
 
           {seller && (

@@ -11,6 +11,7 @@ import {
   PlusCircle,
   MessageSquare,
   Search,
+  MapPin,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -45,6 +46,13 @@ export default function DashboardPage() {
   const activeOffers = myOffers.filter((o) => o.status === "pending" || o.status === "countered");
   const myReviews: { revieweeId: string }[] = []; // TODO: Replace with Supabase query
 
+  // Listings that got an auto-backfilled location from the 003 migration.
+  // Inert until the LISTINGS query above is wired up to Supabase — once it is,
+  // the banner will show automatically for users with unconfirmed listings.
+  const unconfirmedLocations = myListings.filter(
+    (l) => l.status === "active" && !l.locationConfirmed,
+  );
+
   const stats = [
     {
       label: "My Listings",
@@ -74,6 +82,30 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-10 animate-fade-in">
+      {/* Confirm-location banner — renders when any of the user's listings
+          have locationConfirmed === false (auto-backfilled by migration 003). */}
+      {unconfirmedLocations.length > 0 && (
+        <div className="mb-6 bg-brand/10 border border-brand/30 rounded-[var(--radius-md)] p-4 flex items-center gap-3">
+          <MapPin className="h-5 w-5 text-brand shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-foreground">
+              {unconfirmedLocations.length === 1
+                ? "1 of your listings needs location confirmation."
+                : `${unconfirmedLocations.length} of your listings need location confirmation.`}
+            </p>
+            <p className="text-xs text-muted mt-0.5">
+              We auto-filled a rough location. Confirm the pin so buyers see the right area on the map.
+            </p>
+          </div>
+          <Link
+            href={`/listing/${unconfirmedLocations[0].id}/edit`}
+            className="text-xs font-semibold text-brand hover:underline shrink-0"
+          >
+            Review →
+          </Link>
+        </div>
+      )}
+
       {/* Welcome Header */}
       <div className="bg-card border border-border rounded-[var(--radius-md)] p-6 mb-8">
         <div className="flex items-center gap-4">

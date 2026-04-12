@@ -267,11 +267,22 @@ export default function ProfilePage() {
 }
 
 function EditProfileButton({ user }: { user: User }) {
+  const [displayName, setDisplayName] = useState(user.displayName);
   const [bio, setBio] = useState(user.bio);
   const [city, setCity] = useState(user.city);
   const [profileImage, setProfileImage] = useState(user.profileImage || "");
   const [saving, setSaving] = useState(false);
   const [open, setOpen] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  // 60-day cooldown for display name changes. NULL = never edited = free to change.
+  const cooldownEnd = user.lastDisplayNameEditAt
+    ? new Date(new Date(user.lastDisplayNameEditAt).getTime() + 60 * 24 * 60 * 60 * 1000)
+    : null;
+  const canEditName = !cooldownEnd || cooldownEnd <= new Date();
+  const daysRemaining = cooldownEnd && !canEditName
+    ? Math.ceil((cooldownEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : 0;
 
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -282,17 +293,40 @@ function EditProfileButton({ user }: { user: User }) {
 
   async function handleSave() {
     setSaving(true);
+    setSaveError("");
     try {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
-      await supabase.from("profiles").update({
+
+      const updates: Record<string, unknown> = {
         bio: bio.trim(),
         city,
         profile_image: profileImage || null,
-      }).eq("id", user.id);
+      };
+
+      // Only include display_name if the user actually changed it and cooldown allows it.
+      const trimmedName = displayName.trim();
+      if (canEditName && trimmedName && trimmedName !== user.displayName) {
+        updates.display_name = trimmedName;
+        const parts = trimmedName.split(" ");
+        updates.avatar_initials = parts.length >= 2
+          ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+          : trimmedName.slice(0, 2).toUpperCase();
+      }
+
+      const { error } = await supabase
+        .from("profiles")
+        .update(updates)
+        .eq("id", user.id);
+
+      if (error) throw new Error(error.message);
+
+      setOpen(false);
+      window.location.reload();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSaving(false);
-      setOpen(false);
     }
   }
 
@@ -311,7 +345,7 @@ function EditProfileButton({ user }: { user: User }) {
             Edit Profile
           </DialogTitle>
           <DialogDescription className="text-xs text-muted mb-5">
-            Update your bio, photo, and location.
+            Update your name, bio, photo, and location.
           </DialogDescription>
 
           <div className="space-y-5">
@@ -356,6 +390,32 @@ function EditProfileButton({ user }: { user: User }) {
               </div>
             </div>
 
+            {/* Display Name (60-day cooldown) */}
+            <div>
+              <label className="text-xs font-medium text-foreground block mb-1.5">
+                Display Name
+              </label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                disabled={!canEditName}
+                maxLength={50}
+                placeholder="Your display name"
+                className="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-subtle focus:outline-none focus:ring-1 focus:ring-brand disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              {!canEditName && (
+                <p className="text-[10px] text-muted mt-1">
+                  You can change your name again in {daysRemaining} day{daysRemaining !== 1 ? "s" : ""}
+                </p>
+              )}
+              {canEditName && (
+                <p className="text-[10px] text-subtle mt-1">
+                  Name changes have a 60-day cooldown
+                </p>
+              )}
+            </div>
+
             {/* Bio */}
             <div>
               <label className="text-xs font-medium text-foreground block mb-1.5">
@@ -390,6 +450,10 @@ function EditProfileButton({ user }: { user: User }) {
               </div>
             </div>
           </div>
+
+          {saveError && (
+            <p className="text-xs text-danger mt-4">{saveError}</p>
+          )}
 
           <div className="flex gap-2 mt-6">
             <DialogClose className="flex-1 border border-border text-foreground text-sm font-medium py-2.5 rounded-lg hover:bg-surface2 transition-colors">

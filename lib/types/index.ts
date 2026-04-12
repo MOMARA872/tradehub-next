@@ -13,6 +13,8 @@ export interface Region {
   name: string;
   state: string | null;
   isDefault?: boolean;
+  lat: number;
+  lng: number;
 }
 
 export interface Condition {
@@ -39,6 +41,7 @@ export interface User {
   joinedAt: string;
   responseRate: number;
   listingCount: number;
+  lastDisplayNameEditAt: string | null;
 }
 
 export type PriceType = 'fixed' | 'free' | 'trade' | 'negotiable';
@@ -55,6 +58,9 @@ export interface Listing {
   condition: ConditionKey;
   conditionNotes: string;
   city: string;
+  lat: number | null;
+  lng: number | null;
+  locationConfirmed: boolean;
   photos: string[];
   status: 'active' | 'sold' | 'expired';
   createdAt: string;
@@ -75,6 +81,8 @@ export interface Offer {
 }
 
 export interface Message {
+  id: string;
+  threadId: string;
   senderId: string;
   body: string;
   sentAt: string;
@@ -83,12 +91,15 @@ export interface Message {
 
 export interface Thread {
   id: string;
-  participants: string[];
   listingId: string;
+  buyerId: string;
+  sellerId: string;
+  listingTitle: string;
   lastMessage: string;
   lastMessageAt: string;
-  unreadCount: number;
-  messages: Message[];
+  buyerUnread: number;
+  sellerUnread: number;
+  createdAt: string;
 }
 
 export interface Review {
@@ -159,6 +170,7 @@ export interface DbProfile {
   response_rate: number;
   listing_count: number;
   created_at: string;
+  last_display_name_edit_at: string | null;
 }
 
 export interface DbListing {
@@ -173,6 +185,9 @@ export interface DbListing {
   condition: ConditionKey;
   condition_notes: string;
   city: string;
+  lat: number | null;
+  lng: number | null;
+  location_confirmed: boolean;
   photos: string[];
   status: 'active' | 'sold' | 'expired';
   tags: string[];
@@ -206,6 +221,7 @@ export function dbProfileToUser(p: DbProfile): User {
     joinedAt: p.created_at,
     responseRate: p.response_rate,
     listingCount: p.listing_count,
+    lastDisplayNameEditAt: p.last_display_name_edit_at ?? null,
   };
 }
 
@@ -222,9 +238,60 @@ export function dbListingToListing(l: DbListing): Listing {
     condition: l.condition,
     conditionNotes: l.condition_notes,
     city: l.city,
+    lat: l.lat === null || l.lat === undefined ? null : Number(l.lat),
+    lng: l.lng === null || l.lng === undefined ? null : Number(l.lng),
+    locationConfirmed: l.location_confirmed ?? false,
     photos: l.photos,
     status: l.status,
     createdAt: l.created_at,
     tags: l.tags,
+  };
+}
+
+export interface DbThread {
+  id: string;
+  listing_id: string;
+  buyer_id: string;
+  seller_id: string;
+  listing_title: string;
+  last_message: string;
+  last_message_at: string;
+  buyer_unread: number;
+  seller_unread: number;
+  created_at: string;
+}
+
+export interface DbMessage {
+  id: string;
+  thread_id: string;
+  sender_id: string;
+  body: string;
+  is_read: boolean;
+  sent_at: string;
+}
+
+export function dbThreadToThread(t: DbThread): Thread {
+  return {
+    id: t.id,
+    listingId: t.listing_id,
+    buyerId: t.buyer_id,
+    sellerId: t.seller_id,
+    listingTitle: t.listing_title,
+    lastMessage: t.last_message,
+    lastMessageAt: t.last_message_at,
+    buyerUnread: t.buyer_unread,
+    sellerUnread: t.seller_unread,
+    createdAt: t.created_at,
+  };
+}
+
+export function dbMessageToMessage(m: DbMessage): Message {
+  return {
+    id: m.id,
+    threadId: m.thread_id,
+    senderId: m.sender_id,
+    body: m.body,
+    sentAt: m.sent_at,
+    isRead: m.is_read,
   };
 }

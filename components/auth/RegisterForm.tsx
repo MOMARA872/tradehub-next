@@ -14,6 +14,7 @@ export function RegisterForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const supabase = createClient();
 
@@ -22,16 +23,25 @@ export function RegisterForm() {
     setError("");
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: fullName },
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/`,
       },
     });
 
     if (error) {
       setError(error.message);
+      setLoading(false);
+      return;
+    }
+
+    // If session is null, email confirmation is required
+    if (!data.session) {
+      setError("");
+      setSuccess("Check your email for a confirmation link to complete registration.");
       setLoading(false);
       return;
     }
@@ -133,6 +143,12 @@ export function RegisterForm() {
           {error && (
             <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">
               {error}
+            </p>
+          )}
+
+          {success && (
+            <p className="text-xs text-success bg-success/10 border border-success/20 rounded-lg px-3 py-2">
+              {success}
             </p>
           )}
 

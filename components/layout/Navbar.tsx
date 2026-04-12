@@ -54,6 +54,7 @@ export function Navbar() {
   const [regionOpen, setRegionOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const regionRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
 
@@ -79,6 +80,29 @@ export function Navbar() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Fetch unread message count + poll every 5 seconds
+  useEffect(() => {
+    if (!user) {
+      setUnreadMessages(0);
+      return;
+    }
+
+    async function fetchUnread() {
+      const [{ data: buyerThreads }, { data: sellerThreads }] = await Promise.all([
+        supabase.from("threads").select("buyer_unread").eq("buyer_id", user.id),
+        supabase.from("threads").select("seller_unread").eq("seller_id", user.id),
+      ]);
+      const buyerTotal = (buyerThreads ?? []).reduce((sum: number, t: any) => sum + (t.buyer_unread || 0), 0);
+      const sellerTotal = (sellerThreads ?? []).reduce((sum: number, t: any) => sum + (t.seller_unread || 0), 0);
+      setUnreadMessages(buyerTotal + sellerTotal);
+    }
+
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 5000);
+
+    return () => clearInterval(interval);
+  }, [user]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -188,9 +212,14 @@ export function Navbar() {
         {/* Notification + Auth */}
         <div className="flex items-center gap-2">
           {!!user && (
-            <button className="relative text-muted hover:text-foreground transition-colors">
+            <Link href="/messages" className="relative text-muted hover:text-foreground transition-colors">
               <Bell className="h-4.5 w-4.5" />
-            </button>
+              {unreadMessages > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 h-4 min-w-[16px] px-1 flex items-center justify-center rounded-full bg-brand text-white text-[9px] font-bold leading-none">
+                  {unreadMessages > 99 ? "99+" : unreadMessages}
+                </span>
+              )}
+            </Link>
           )}
 
           {!!user && profile ? (

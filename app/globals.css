@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Leaflet divIcon override — remove default white-bg/border so our
+   price-tag pins render cleanly. */
+.tradehub-price-pin {
+  background: transparent !important;
+  border: none !important;
+}
+
 /* ============================================================================
    TRADEHUB DESIGN TOKENS
    ============================================================================ */

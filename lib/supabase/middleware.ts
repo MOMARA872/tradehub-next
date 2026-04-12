@@ -36,9 +36,16 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
+  // Use getSession() instead of getUser() in the proxy — it validates the
+  // JWT locally without a network round-trip to Supabase, so it won't kick
+  // the user to /login when the Supabase API is slow or rate-limited.
+  // getUser() should still be used in Server Components where verified
+  // identity matters.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const user = session?.user ?? null;
 
   const isProtected = PROTECTED_ROUTES.some((route) =>
     request.nextUrl.pathname.startsWith(route)
