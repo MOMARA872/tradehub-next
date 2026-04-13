@@ -63,7 +63,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
 
   const { data: listingRow } = await supabase
     .from("listings")
-    .select("id, user_id, category_id, title, description, photos, price, price_type, condition, condition_notes, tags, city, zip_code, subcategory, status, created_at, views_count, lat, lng, location_confirmed")
+    .select("id, user_id, category_id, title, description, photos, price, price_type, condition, condition_notes, tags, city, zip_code, subcategory, status, created_at, lat, lng, location_confirmed")
     .eq("id", id)
     .single();
 
@@ -91,7 +91,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
       .eq("listing_id", id),
     supabase
       .from("listings")
-      .select("id, user_id, category_id, title, description, photos, price, price_type, condition, condition_notes, tags, city, zip_code, subcategory, status, created_at, views_count, lat, lng, location_confirmed")
+      .select("id, user_id, category_id, title, description, photos, price, price_type, condition, condition_notes, tags, city, zip_code, subcategory, status, created_at, lat, lng, location_confirmed")
       .eq("category_id", listingRow.category_id)
       .neq("id", id)
       .eq("status", "active")
