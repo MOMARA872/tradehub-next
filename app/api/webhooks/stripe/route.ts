@@ -3,10 +3,12 @@ import { getStripe } from "@/lib/stripe";
 import { createClient } from "@supabase/supabase-js";
 import type Stripe from "stripe";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getServiceSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function POST(request: Request) {
   const stripe = await getStripe();
@@ -52,7 +54,7 @@ export async function POST(request: Request) {
           : null;
       }
 
-      await supabase
+      await getServiceSupabase()
         .from("profiles")
         .update({
           tier: "pro",
@@ -64,7 +66,7 @@ export async function POST(request: Request) {
         })
         .eq("id", userId);
 
-      await supabase
+      await getServiceSupabase()
         .from("listings")
         .update({ status: "active" })
         .eq("user_id", userId)
@@ -80,7 +82,7 @@ export async function POST(request: Request) {
           ? subscription.customer
           : subscription.customer.id;
 
-      await supabase
+      await getServiceSupabase()
         .from("profiles")
         .update({
           subscription_status: subscription.status,
@@ -105,7 +107,7 @@ export async function POST(request: Request) {
           ? subscription.customer
           : subscription.customer.id;
 
-      const { data: profile } = await supabase
+      const { data: profile } = await getServiceSupabase()
         .from("profiles")
         .update({
           tier: "free",
@@ -117,7 +119,7 @@ export async function POST(request: Request) {
         .single();
 
       if (profile) {
-        await supabase
+        await getServiceSupabase()
           .from("listings")
           .update({ status: "paused" })
           .eq("user_id", profile.id)
