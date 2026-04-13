@@ -54,6 +54,7 @@ export function Navbar() {
     { id: "/disputes", label: "Disputes", href: "/disputes", icon: Scale },
   ];
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchZip, setSearchZip] = useState("");
   const [regionOpen, setRegionOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -153,9 +154,13 @@ export function Navbar() {
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    const params = new URLSearchParams();
+    if (searchQuery.trim()) params.set("q", searchQuery.trim());
+    if (searchZip.trim()) params.set("zip", searchZip.trim());
+    if (params.toString()) {
+      router.push(`/search?${params.toString()}`);
       setSearchQuery("");
+      setSearchZip("");
     }
   }
 
@@ -211,8 +216,8 @@ export function Navbar() {
         </div>
 
         {/* Search Bar */}
-        <form onSubmit={handleSearch} className="hidden sm:flex items-center flex-1 max-w-xs">
-          <div className="relative w-full">
+        <form onSubmit={handleSearch} className="hidden sm:flex items-center flex-1 max-w-sm gap-1.5">
+          <div className="relative flex-1">
             <input
               type="text"
               value={searchQuery}
@@ -223,6 +228,15 @@ export function Navbar() {
             <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-subtle hover:text-foreground">
               <Search className="h-3.5 w-3.5" />
             </button>
+          </div>
+          <div className="relative w-20">
+            <input
+              type="text"
+              value={searchZip}
+              onChange={(e) => setSearchZip(e.target.value.replace(/[^0-9-]/g, "").slice(0, 5))}
+              placeholder="Zip"
+              className="w-full bg-surface2 border border-border rounded-lg pl-2.5 pr-2.5 py-1.5 text-sm text-foreground placeholder:text-subtle focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand transition-colors text-center"
+            />
           </div>
         </form>
 
