@@ -17,17 +17,17 @@ function UserAvatar({ user, size = 'md' }: { user: MinimalUser | null; size?: 's
 
   if (user?.profileImage) {
     return (
-      <Image
-        src={user.profileImage}
-        alt={user.displayName}
-        width={px}
-        height={px}
-        className={cn(
-          'rounded-full object-cover shrink-0',
-          classes
-        )}
-        title={user.displayName}
-      />
+      <div className={cn('rounded-full overflow-hidden shrink-0', classes)}>
+        <Image
+          src={user.profileImage}
+          alt={user.displayName}
+          width={px}
+          height={px}
+          unoptimized
+          className="h-full w-full object-cover"
+          title={user.displayName}
+        />
+      </div>
     );
   }
 

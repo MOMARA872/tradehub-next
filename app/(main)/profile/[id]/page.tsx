@@ -47,12 +47,18 @@ export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [userListings, setUserListings] = useState<Listing[]>([]);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [liveStats, setLiveStats] = useState({ offerCount: 0, threadCount: 0 });
 
   useEffect(() => {
     let mounted = true;
 
     async function loadProfile() {
-      const [{ data: profile }, { data: listings }] = await Promise.all([
+      const [
+        { data: profile },
+        { data: listings },
+        { count: offerCount },
+        { count: threadCount },
+      ] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", userId).single(),
         supabase
           .from("listings")
@@ -60,12 +66,21 @@ export default function ProfilePage() {
           .eq("user_id", userId)
           .eq("status", "active")
           .order("created_at", { ascending: false }),
+        supabase
+          .from("offers")
+          .select("*", { count: "exact", head: true })
+          .eq("buyer_id", userId),
+        supabase
+          .from("threads")
+          .select("*", { count: "exact", head: true })
+          .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`),
       ]);
 
       if (!mounted) return;
 
       setUser(profile ? dbProfileToUser(profile) : null);
       setUserListings((listings ?? []).map(dbListingToListing));
+      setLiveStats({ offerCount: offerCount ?? 0, threadCount: threadCount ?? 0 });
       setProfileLoading(false);
     }
 
@@ -203,29 +218,29 @@ export default function ProfilePage() {
             <StarRating rating={user.ratingAvg} />
           </div>
           <p className="text-xs text-muted">
-            {user.ratingAvg.toFixed(1)} ({user.reviewCount} reviews)
+            {user.ratingAvg.toFixed(1)} ({userReviews.length} reviews)
           </p>
         </div>
         <div className="bg-card border border-border rounded-[var(--radius-md)] p-4 text-center">
           <div className="flex items-center justify-center gap-1 mb-1">
             <Shield className="h-4 w-4 text-brand" />
             <span className="text-sm font-semibold text-foreground">
-              {user.trustScore}%
+              {Math.min(100, 50 + userListings.length * 5 + liveStats.offerCount * 3 + liveStats.threadCount * 2)}%
             </span>
           </div>
           <p className="text-xs text-muted">
-            <TrustBadge score={user.trustScore} />
+            <TrustBadge score={Math.min(100, 50 + userListings.length * 5 + liveStats.offerCount * 3 + liveStats.threadCount * 2)} />
           </p>
         </div>
         <div className="bg-card border border-border rounded-[var(--radius-md)] p-4 text-center">
           <p className="text-sm font-semibold text-foreground mb-1">
-            {user.responseRate}%
+            {liveStats.threadCount > 0 ? Math.min(100, Math.round((liveStats.threadCount / (liveStats.threadCount + 1)) * 100)) : 0}%
           </p>
           <p className="text-xs text-muted">Response Rate</p>
         </div>
         <div className="bg-card border border-border rounded-[var(--radius-md)] p-4 text-center">
           <p className="text-sm font-semibold text-foreground mb-1">
-            {user.listingCount}
+            {userListings.length}
           </p>
           <p className="text-xs text-muted">Listings</p>
         </div>
