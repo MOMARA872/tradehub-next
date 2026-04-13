@@ -9,6 +9,7 @@ const supabase = createClient(
 );
 
 export async function POST(request: Request) {
+  const stripe = await getStripe();
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");
 
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
   let event: Stripe.Event;
 
   try {
-    event = getStripe().webhooks.constructEvent(
+    event = stripe.webhooks.constructEvent(
       body,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
       let trialEnd: string | null = null;
       let status: string = "active";
       if (subscriptionId) {
-        const sub = await getStripe().subscriptions.retrieve(subscriptionId);
+        const sub = await stripe.subscriptions.retrieve(subscriptionId);
         status = sub.status;
         trialEnd = sub.trial_end
           ? new Date(sub.trial_end * 1000).toISOString()

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
 
 export async function POST(request: Request) {
+  const stripe = await getStripe();
   const supabase = await createClient();
   const {
     data: { user },
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
   let customerId = profile?.stripe_customer_id;
 
   if (!customerId) {
-    const customer = await getStripe().customers.create({
+    const customer = await stripe.customers.create({
       email: user.email,
       metadata: { supabase_user_id: user.id },
     });
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
 
   const { origin } = new URL(request.url);
 
-  const session = await getStripe().checkout.sessions.create({
+  const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
     line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],

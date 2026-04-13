@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
 
 export async function POST(request: Request) {
+  const stripe = await getStripe();
   const supabase = await createClient();
   const {
     data: { user },
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
 
   const { origin } = new URL(request.url);
 
-  const session = await getStripe().billingPortal.sessions.create({
+  const session = await stripe.billingPortal.sessions.create({
     customer: profile.stripe_customer_id,
     return_url: `${origin}/settings`,
   });
