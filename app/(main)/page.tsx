@@ -208,26 +208,31 @@ export default async function HomePage() {
       {/* CTA Section */}
       <section className="py-14">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
-          <div className="bg-gradient-to-r from-brand to-brand2 rounded-2xl p-8 sm:p-12 text-center text-white">
-            <h2 className="font-heading font-bold text-2xl sm:text-3xl mb-3">
-              Ready to Start Trading?
-            </h2>
-            <p className="text-white/80 text-sm sm:text-base mb-6 max-w-md mx-auto">
-              Join thousands of community members already trading on TradeHub.
-            </p>
-            <div className="flex items-center justify-center gap-3">
-              <Link
-                href="/register"
-                className="bg-white text-brand font-semibold text-sm px-6 py-2.5 rounded-lg hover:opacity-90 transition-opacity"
-              >
-                Sign Up Free
-              </Link>
-              <Link
-                href="/post-new"
-                className="border border-white/30 text-white font-semibold text-sm px-6 py-2.5 rounded-lg hover:bg-white/10 transition-colors"
-              >
-                Post a Free Listing
-              </Link>
+          <div className="relative overflow-hidden rounded-2xl p-8 sm:p-12 text-center">
+            <div className="absolute inset-0 bg-gradient-to-br from-brand via-brand2 to-brand opacity-90" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_50%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,rgba(0,0,0,0.1),transparent_50%)]" />
+            <div className="relative z-10">
+              <h2 className="font-heading font-bold text-2xl sm:text-3xl mb-3 text-white drop-shadow-sm">
+                Ready to Start Trading?
+              </h2>
+              <p className="text-white/85 text-sm sm:text-base mb-8 max-w-md mx-auto">
+                Join thousands of community members already trading on TradeHub.
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <Link
+                  href="/register"
+                  className="bg-white text-brand font-semibold text-sm px-6 py-3 rounded-lg shadow-lg shadow-black/10 hover:shadow-xl hover:scale-[1.02] transition-all"
+                >
+                  Sign Up Free
+                </Link>
+                <Link
+                  href="/post-new"
+                  className="border border-white/40 text-white font-semibold text-sm px-6 py-3 rounded-lg backdrop-blur-sm hover:bg-white/15 hover:border-white/60 transition-all"
+                >
+                  Post a Free Listing
+                </Link>
+              </div>
             </div>
           </div>
         </div>
