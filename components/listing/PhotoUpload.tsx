@@ -27,8 +27,8 @@ export function PhotoUpload({ userId, photos, onPhotosChange, maxPhotos = 6 }: P
     const newPhotos: string[] = [];
 
     for (const file of Array.from(files)) {
-      if (file.size > 5 * 1024 * 1024) {
-        setError("Each photo must be under 5MB");
+      if (file.size > 50 * 1024 * 1024) {
+        setError("Each photo must be under 50MB");
         continue;
       }
 
@@ -105,7 +105,7 @@ export function PhotoUpload({ userId, photos, onPhotosChange, maxPhotos = 6 }: P
       </div>
 
       {error && <p className="text-xs text-danger mt-1">{error}</p>}
-      <p className="text-[10px] text-subtle">{photos.length}/{maxPhotos} photos. Max 5MB each.</p>
+      <p className="text-[10px] text-subtle">{photos.length}/{maxPhotos} photos. Max 50MB each.</p>
     </div>
   );
 }
