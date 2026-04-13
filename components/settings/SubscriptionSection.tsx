@@ -6,6 +6,7 @@ import type { User } from "@/lib/types";
 
 export function SubscriptionSection({ user }: { user: User }) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const isPro =
     user.tier === "pro" &&
@@ -17,26 +18,42 @@ export function SubscriptionSection({ user }: { user: User }) {
 
   async function handleUpgrade() {
     setLoading(true);
+    setError("");
     try {
-      const res = await fetch("/api/stripe/checkout", { method: "POST" });
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        credentials: "include",
+      });
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        setError(data.error || "Failed to start checkout");
+        setLoading(false);
       }
-    } catch {
+    } catch (err) {
+      setError("Something went wrong. Please try again.");
       setLoading(false);
     }
   }
 
   async function handleManageBilling() {
     setLoading(true);
+    setError("");
     try {
-      const res = await fetch("/api/stripe/portal", { method: "POST" });
+      const res = await fetch("/api/stripe/portal", {
+        method: "POST",
+        credentials: "include",
+      });
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        setError(data.error || "Failed to open billing portal");
+        setLoading(false);
       }
-    } catch {
+    } catch (err) {
+      setError("Something went wrong. Please try again.");
       setLoading(false);
     }
   }
@@ -94,6 +111,12 @@ export function SubscriptionSection({ user }: { user: User }) {
               <span className="text-brand">&#10003;</span> 30-day free trial
             </div>
           </div>
+        )}
+
+        {error && (
+          <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2 mb-3">
+            {error}
+          </p>
         )}
 
         {!isPro && (
