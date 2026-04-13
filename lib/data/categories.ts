@@ -18,15 +18,6 @@ export const CATEGORIES: Category[] = [
     ],
   },
   {
-    id: 'housing',
-    name: 'Housing',
-    slug: 'housing',
-    icon: '🏠',
-    description: 'Apartments, houses, roommates, and vacation rentals',
-    isHot: true,
-    subcategories: ['Rent', 'Sale', 'Roommate', 'Vacation Rental'],
-  },
-  {
     id: 'barter',
     name: 'Barter',
     slug: 'barter',
