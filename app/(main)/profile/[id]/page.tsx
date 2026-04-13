@@ -153,16 +153,18 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Profile Header */}
-      <div className="relative z-10 px-4 sm:px-6 -mt-10">
-        <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-          {/* Avatar */}
-          <div className="ring-4 ring-card rounded-full">
-            <UserAvatar user={user} size="lg" />
-          </div>
+      {/* Avatar - overlaps banner */}
+      <div className="relative z-10 px-4 sm:px-6 -mt-10 mb-3">
+        <div className="ring-4 ring-card rounded-full inline-block">
+          <UserAvatar user={user} size="lg" />
+        </div>
+      </div>
 
+      {/* Profile Header - below banner */}
+      <div className="px-4 sm:px-6">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
           {/* Name & Info */}
-          <div className="flex-1 pb-1 mt-12 sm:mt-0">
+          <div className="flex-1">
             <h1 className="font-heading font-bold text-xl text-foreground flex items-center gap-2">
               {user.displayName}
               {user.isVerified && (
