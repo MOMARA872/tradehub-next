@@ -147,7 +147,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Name & Info */}
-          <div className="flex-1 pb-1">
+          <div className="flex-1 pb-1 mt-12 sm:mt-0">
             <h1 className="font-heading font-bold text-xl text-foreground flex items-center gap-2">
               {user.displayName}
               {user.isVerified && (
