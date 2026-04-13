@@ -42,6 +42,7 @@ export interface User {
   responseRate: number;
   listingCount: number;
   lastDisplayNameEditAt: string | null;
+  coverImage?: string;
   tier: "free" | "pro";
   subscriptionStatus: "none" | "trialing" | "active" | "past_due" | "canceled";
   trialEndsAt: string | null;
@@ -205,6 +206,7 @@ export interface DbProfile {
   listing_count: number;
   created_at: string;
   last_display_name_edit_at: string | null;
+  cover_image: string | null;
   tier: string;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
@@ -262,6 +264,7 @@ export function dbProfileToUser(p: DbProfile): User {
     responseRate: p.response_rate,
     listingCount: p.listing_count,
     lastDisplayNameEditAt: p.last_display_name_edit_at ?? null,
+    coverImage: p.cover_image ?? undefined,
     tier: (p.tier as User["tier"]) || "free",
     subscriptionStatus: (p.subscription_status as User["subscriptionStatus"]) || "none",
     trialEndsAt: p.trial_ends_at ?? null,
@@ -337,5 +340,52 @@ export function dbMessageToMessage(m: DbMessage): Message {
     body: m.body,
     sentAt: m.sent_at,
     isRead: m.is_read,
+  };
+}
+
+// Blind reviews — DB row shape
+import type { BlindReview } from '@/lib/data/blind-reviews';
+export interface DbBlindReviewEntry {
+  rating: number;
+  comment: string;
+  quickTags: string[];
+  conditionMatch: string;
+  submittedAt: string;
+}
+
+export interface DbBlindReview {
+  id: string;
+  listing_id: string;
+  buyer_id: string;
+  seller_id: string;
+  buyer_review: DbBlindReviewEntry | null;
+  seller_review: DbBlindReviewEntry | null;
+  status: 'revealed' | 'awaiting_seller' | 'awaiting_buyer' | 'awaiting_both';
+  revealed_at: string | null;
+  created_at: string;
+  // Joined fields (from select with profiles/listings)
+  listings?: { title: string };
+  buyer?: { display_name: string; avatar_initials: string; profile_image: string | null };
+  seller?: { display_name: string; avatar_initials: string; profile_image: string | null };
+}
+
+export function dbBlindReviewToBlindReview(r: DbBlindReview): BlindReview {
+  return {
+    id: r.id,
+    transactionId: r.id,
+    listingId: r.listing_id,
+    buyerId: r.buyer_id,
+    sellerId: r.seller_id,
+    buyerReview: r.buyer_review,
+    sellerReview: r.seller_review,
+    status: r.status,
+    revealedAt: r.revealed_at,
+    listingTitle: r.listings?.title ?? null,
+    buyerName: r.buyer?.display_name ?? null,
+    buyerInitials: r.buyer?.avatar_initials ?? null,
+    buyerImage: r.buyer?.profile_image ?? null,
+    sellerName: r.seller?.display_name ?? null,
+    sellerInitials: r.seller?.avatar_initials ?? null,
+    sellerImage: r.seller?.profile_image ?? null,
   };
 }

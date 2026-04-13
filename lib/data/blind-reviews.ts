@@ -16,6 +16,14 @@ export interface BlindReview {
   sellerReview: BlindReviewEntry | null;
   status: 'revealed' | 'awaiting_seller' | 'awaiting_buyer' | 'awaiting_both';
   revealedAt: string | null;
+  // Joined display fields from Supabase query
+  listingTitle?: string | null;
+  buyerName?: string | null;
+  buyerInitials?: string | null;
+  buyerImage?: string | null;
+  sellerName?: string | null;
+  sellerInitials?: string | null;
+  sellerImage?: string | null;
 }
 
 export const BLIND_REVIEWS: BlindReview[] = [

@@ -6,5 +6,5 @@ export const REGIONS: Region[] = [
   { id: 'tucson-az', name: 'Tucson, AZ', state: 'AZ', lat: 32.2226, lng: -110.9747 },
   { id: 'flagstaff-az', name: 'Flagstaff, AZ', state: 'AZ', lat: 35.1983, lng: -111.6513 },
   { id: 'sedona-az', name: 'Sedona, AZ', state: 'AZ', lat: 34.8697, lng: -111.7610 },
-  { id: 'all', name: 'All Regions', state: null, lat: 34.0, lng: -111.5 },
+  { id: 'all', name: 'All Arizona', state: 'AZ', lat: 34.0, lng: -111.5 },
 ];

@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Listing, Region } from "@/lib/types";
-import { fuzzCoord } from "@/lib/helpers/fuzzLocation";
+import { REGIONS } from "@/lib/data/regions";
 
 export interface MapBounds {
   north: number;
@@ -13,80 +13,55 @@ export interface MapBounds {
   west: number;
 }
 
+// Default Leaflet marker icon
+const defaultIcon = L.icon({
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconRetinaUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+function getRegionForListing(listing: Listing): Region | undefined {
+  // Match by city field (handles both region IDs like "prescott-az"
+  // and region names like "Prescott, AZ").
+  return REGIONS.find(
+    (r) =>
+      r.id !== "all" &&
+      (r.name === listing.city || r.id === listing.city),
+  );
+}
+
 interface ListingMapProps {
   listings: Listing[];
   selectedRegion: Region;
+  flyTo?: { lat: number; lng: number; zoom: number } | null;
   hoveredId?: string | null;
   onMarkerHover?: (id: string | null) => void;
+  onRegionClick?: (regionId: string) => void;
   onBoundsChange?: (bounds: MapBounds) => void;
-  onMarkerClick?: (id: string) => void;
-}
-
-function formatPriceTag(listing: Listing): string {
-  if (listing.priceType === "free") return "Free";
-  if (listing.priceType === "trade") return "Trade";
-  if (listing.price >= 1000) return `$${(listing.price / 1000).toFixed(1)}k`;
-  return `$${Math.round(listing.price)}`;
-}
-
-function makeDivIcon(priceTag: string, highlighted: boolean): L.DivIcon {
-  // FB Marketplace-style price label pin.
-  const bg = highlighted ? "#22c55e" : "#ffffff";
-  const color = highlighted ? "#ffffff" : "#0f172a";
-  const border = highlighted ? "#16a34a" : "#0f172a";
-  const scale = highlighted ? "scale(1.15)" : "scale(1)";
-  const shadow = highlighted
-    ? "0 4px 12px rgba(34,197,94,0.5)"
-    : "0 2px 6px rgba(0,0,0,0.25)";
-
-  const html = `
-    <div style="
-      transform: ${scale};
-      transition: transform 120ms ease, box-shadow 120ms ease;
-      background: ${bg};
-      color: ${color};
-      border: 1.5px solid ${border};
-      border-radius: 999px;
-      padding: 3px 10px;
-      font-family: system-ui, sans-serif;
-      font-size: 12px;
-      font-weight: 700;
-      white-space: nowrap;
-      box-shadow: ${shadow};
-    ">${priceTag}</div>
-  `;
-
-  return L.divIcon({
-    html,
-    className: "tradehub-price-pin",
-    iconSize: [0, 0], // divIcon sizes from CSS
-    iconAnchor: [20, 12],
-  });
 }
 
 export function ListingMap({
   listings,
   selectedRegion,
-  hoveredId,
-  onMarkerHover,
+  flyTo,
+  onRegionClick,
   onBoundsChange,
-  onMarkerClick,
 }: ListingMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
-  const markerByIdRef = useRef<Map<string, L.Marker>>(new Map());
   const boundsChangeRef = useRef(onBoundsChange);
-  const markerHoverRef = useRef(onMarkerHover);
-  const markerClickRef = useRef(onMarkerClick);
+  const regionClickRef = useRef(onRegionClick);
 
-  // Keep latest callbacks reachable from inside map event handlers
-  // (so we don't have to re-bind every render).
   useEffect(() => {
     boundsChangeRef.current = onBoundsChange;
-    markerHoverRef.current = onMarkerHover;
-    markerClickRef.current = onMarkerClick;
-  }, [onBoundsChange, onMarkerHover, onMarkerClick]);
+    regionClickRef.current = onRegionClick;
+  }, [onBoundsChange, onRegionClick]);
 
   // Initialize map once.
   useEffect(() => {
@@ -123,8 +98,6 @@ export function ListingMap({
       }, 200);
     };
     map.on("moveend", emitBounds);
-
-    // Emit the initial viewport so the parent can do a first query if it wants.
     emitBounds();
 
     return () => {
@@ -132,13 +105,11 @@ export function ListingMap({
       map.remove();
       mapRef.current = null;
       markersRef.current = null;
-      markerByIdRef.current.clear();
     };
-    // Only run once on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fly to the selected region when it changes.
+  // Fly to selected region.
   useEffect(() => {
     if (!mapRef.current) return;
     const zoom = selectedRegion.id === "all" ? 7 : 11;
@@ -147,43 +118,66 @@ export function ListingMap({
     });
   }, [selectedRegion]);
 
-  // Rebuild markers whenever the listings change.
+  // Ad-hoc fly-to from location search.
+  useEffect(() => {
+    if (!mapRef.current || !flyTo) return;
+    mapRef.current.flyTo([flyTo.lat, flyTo.lng], flyTo.zoom, {
+      duration: 0.8,
+    });
+  }, [flyTo]);
+
+  // Region-level markers with listing counts.
   useEffect(() => {
     if (!markersRef.current) return;
     markersRef.current.clearLayers();
-    markerByIdRef.current.clear();
 
+    // Group listings by region.
+    const regionListings = new Map<string, Listing[]>();
     for (const listing of listings) {
-      if (listing.lat == null || listing.lng == null) continue;
+      const region = getRegionForListing(listing);
+      if (region) {
+        const existing = regionListings.get(region.id) || [];
+        existing.push(listing);
+        regionListings.set(region.id, existing);
+      }
+    }
 
-      const { lat, lng } = fuzzCoord(listing.lat, listing.lng, listing.id);
-      const marker = L.marker([lat, lng], {
-        icon: makeDivIcon(formatPriceTag(listing), listing.id === hoveredId),
-        riseOnHover: true,
+    // One marker per region.
+    for (const region of REGIONS) {
+      if (region.id === "all") continue;
+
+      const regionItems = regionListings.get(region.id) || [];
+      const count = regionItems.length;
+
+      const marker = L.marker([region.lat, region.lng], {
+        icon: defaultIcon,
       });
 
-      marker.on("mouseover", () => markerHoverRef.current?.(listing.id));
-      marker.on("mouseout", () => markerHoverRef.current?.(null));
-      marker.on("click", () => markerClickRef.current?.(listing.id));
+      const popupContent = `
+        <div style="min-width: 160px; font-family: system-ui, sans-serif;">
+          <strong style="font-size: 14px;">${region.name}</strong>
+          <div style="margin-top: 4px; font-size: 12px; color: #666;">
+            ${count} listing${count !== 1 ? "s" : ""} available
+          </div>
+          ${regionItems
+            .slice(0, 3)
+            .map(
+              (l) =>
+                `<div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #eee; font-size: 12px;">
+                  <div style="font-weight: 500;">${l.title}</div>
+                  <div style="color: #888;">${l.priceType === "free" ? "Free" : l.priceType === "trade" ? "Trade only" : "$" + l.price}</div>
+                </div>`,
+            )
+            .join("")}
+          ${count > 3 ? `<div style="margin-top: 6px; font-size: 11px; color: #888;">+${count - 3} more</div>` : ""}
+        </div>
+      `;
 
+      marker.bindPopup(popupContent);
+      marker.on("click", () => regionClickRef.current?.(region.id));
       marker.addTo(markersRef.current!);
-      markerByIdRef.current.set(listing.id, marker);
     }
-    // hoveredId intentionally not in deps — the separate effect below handles it
-    // so we don't rebuild every marker on hover.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listings]);
-
-  // When hoveredId changes, swap just the affected markers' icons.
-  useEffect(() => {
-    for (const [id, marker] of markerByIdRef.current.entries()) {
-      const listing = listings.find((l) => l.id === id);
-      if (!listing) continue;
-      marker.setIcon(
-        makeDivIcon(formatPriceTag(listing), id === hoveredId),
-      );
-    }
-  }, [hoveredId, listings]);
 
   return (
     <div

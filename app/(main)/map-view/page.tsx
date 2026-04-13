@@ -9,7 +9,8 @@ import type { Listing } from "@/lib/types";
 import { useRegionStore } from "@/store/regionStore";
 import { ListingSidebar } from "@/components/map/ListingSidebar";
 import type { MapBounds } from "@/components/map/ListingMap";
-import { MapPin, Loader2, Search } from "lucide-react";
+import { searchAddress, type GeocodeResult } from "@/lib/helpers/geocoding";
+import { MapPin, Loader2, Search, X } from "lucide-react";
 
 // Dynamic import — Leaflet touches `window`, so it can't be SSR'd.
 const ListingMap = dynamic(
@@ -31,6 +32,33 @@ export default function MapViewPage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  // Location search — fly to any place, not just the 5 region chips.
+  const [locationQuery, setLocationQuery] = useState("");
+  const [locationResults, setLocationResults] = useState<GeocodeResult[]>([]);
+  const [locationSearching, setLocationSearching] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
+
+  useEffect(() => {
+    if (!locationQuery.trim()) {
+      setLocationResults([]);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setLocationSearching(true);
+      try {
+        const found = await searchAddress(locationQuery, controller.signal);
+        setLocationResults(found);
+        setLocationOpen(true);
+      } catch {
+        // Abort or network error — ignore
+      } finally {
+        setLocationSearching(false);
+      }
+    }, 350);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [locationQuery]);
 
   // Viewport the user is currently looking at, and a dirty flag so we can
   // show a "Search this area" button when they pan.
@@ -87,6 +115,20 @@ export default function MapViewPage() {
     if (viewport) fetchListingsInBounds(viewport);
   }, [viewport, fetchListingsInBounds]);
 
+  // Fly-to target from the location search box.
+  const [mapFlyTo, setMapFlyTo] = useState<{ lat: number; lng: number; zoom: number } | null>(null);
+
+  function handleLocationSelect(result: GeocodeResult) {
+    // Determine zoom: city/town → 11 (local), state/admin → 7 (state), else 13 (street).
+    const zoom = result.type === "administrative" || result.type === "city" || result.type === "town"
+      ? 11
+      : 13;
+    setMapFlyTo({ lat: result.lat, lng: result.lng, zoom });
+    setLocationQuery(result.displayName.split(",")[0]);
+    setLocationResults([]);
+    setLocationOpen(false);
+  }
+
   return (
     <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-8 animate-fade-in">
       {/* Page Header */}
@@ -98,6 +140,45 @@ export default function MapViewPage() {
           </h1>
         </div>
         <p className="text-sm text-muted">Discover listings near you</p>
+      </div>
+
+      {/* Location search — jump to any area */}
+      <div className="relative mb-4 max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none" />
+        <input
+          type="text"
+          value={locationQuery}
+          onChange={(e) => setLocationQuery(e.target.value)}
+          onFocus={() => locationResults.length > 0 && setLocationOpen(true)}
+          placeholder="Search a city, address, or area..."
+          className="w-full pl-9 pr-9 py-2 rounded-full border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand"
+        />
+        {locationSearching ? (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted animate-spin" />
+        ) : locationQuery ? (
+          <button
+            onClick={() => { setLocationQuery(""); setLocationResults([]); setLocationOpen(false); }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
+
+        {locationOpen && locationResults.length > 0 && (
+          <ul className="absolute z-[1000] top-full left-0 right-0 mt-1 bg-card border border-border rounded-[var(--radius-md)] shadow-lg overflow-hidden max-h-56 overflow-y-auto">
+            {locationResults.map((r) => (
+              <li key={r.id}>
+                <button
+                  onClick={() => handleLocationSelect(r)}
+                  className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-surface3 flex items-start gap-2"
+                >
+                  <MapPin className="h-4 w-4 text-muted shrink-0 mt-0.5" />
+                  <span className="leading-snug">{r.displayName}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Region chip filters — now re-center the map instead of filtering
@@ -126,8 +207,8 @@ export default function MapViewPage() {
           <ListingMap
             listings={listings}
             selectedRegion={selectedRegion}
-            hoveredId={hoveredId}
-            onMarkerHover={setHoveredId}
+            flyTo={mapFlyTo}
+            onRegionClick={(regionId) => setRegion(regionId)}
             onBoundsChange={handleBoundsChange}
           />
 

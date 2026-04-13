@@ -96,10 +96,50 @@ export default function ProfilePage() {
   return (
     <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-8 animate-fade-in">
       {/* Cover Banner */}
-      <div className="h-32 bg-gradient-to-r from-brand to-brand2 rounded-[var(--radius-lg)]" />
+      <div className="relative h-32 rounded-[var(--radius-lg)] overflow-hidden">
+        {user.coverImage ? (
+          <Image
+            src={user.coverImage}
+            alt="Cover"
+            fill
+            unoptimized
+            className="object-cover"
+          />
+        ) : (
+          <div className="h-full w-full bg-gradient-to-r from-brand to-brand2" />
+        )}
+        {isOwnProfile && (
+          <label className="absolute bottom-2 right-2 flex items-center gap-1.5 px-3 py-1.5 bg-black/50 backdrop-blur text-white text-xs font-medium rounded-lg cursor-pointer hover:bg-black/70 transition-colors">
+            <Camera className="h-3.5 w-3.5" />
+            Edit Cover
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const path = `${user.id}/${crypto.randomUUID()}.${file.name.split(".").pop()}`;
+                const { error: uploadErr } = await supabase.storage
+                  .from("profile-covers")
+                  .upload(path, file);
+                if (uploadErr) { alert(uploadErr.message); return; }
+                const { data: { publicUrl } } = supabase.storage
+                  .from("profile-covers")
+                  .getPublicUrl(path);
+                await supabase
+                  .from("profiles")
+                  .update({ cover_image: publicUrl })
+                  .eq("id", user.id);
+                window.location.reload();
+              }}
+            />
+          </label>
+        )}
+      </div>
 
       {/* Profile Header */}
-      <div className="px-4 sm:px-6 -mt-10">
+      <div className="relative z-10 px-4 sm:px-6 -mt-10">
         <div className="flex flex-col sm:flex-row sm:items-end gap-4">
           {/* Avatar */}
           <div className="ring-4 ring-card rounded-full">

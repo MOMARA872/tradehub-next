@@ -1,22 +1,44 @@
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
-import { BLIND_REVIEWS } from "@/lib/data/blind-reviews";
-import type { BlindReview } from "@/lib/data/blind-reviews";
-import type { User } from "@/lib/types";
-import { UserAvatar } from "@/components/user/UserAvatar";
+import { createClient } from "@/lib/supabase/client";
+import { dbBlindReviewToBlindReview } from "@/lib/types";
+import type { BlindReview, BlindReviewEntry } from "@/lib/data/blind-reviews";
 import { StarRating } from "@/components/user/StarRating";
 import { EmptyState } from "@/components/common/EmptyState";
 import { truncate, timeAgo } from "@/lib/helpers/format";
+import { useState, useEffect, useCallback } from "react";
 import {
   Eye,
   EyeOff,
   Clock,
   CheckCircle,
   AlertTriangle,
+  Star,
+  Loader2,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 
+// --- Quick tag options ---
+const BUYER_TAGS = [
+  "Fast Shipping",
+  "As Described",
+  "Great Communication",
+  "Well Packaged",
+  "Fair Price",
+  "Would Buy Again",
+];
+const SELLER_TAGS = [
+  "Quick Responder",
+  "Easy to Work With",
+  "Reliable",
+  "Punctual",
+  "Friendly",
+  "Smooth Transaction",
+];
+
+// --- Status badge ---
 function StatusBadge({ status }: { status: BlindReview["status"] }) {
   const config: Record<
     BlindReview["status"],
@@ -43,9 +65,7 @@ function StatusBadge({ status }: { status: BlindReview["status"] }) {
       Icon: EyeOff,
     },
   };
-
   const { label, classes, Icon } = config[status];
-
   return (
     <span
       className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${classes}`}
@@ -56,13 +76,14 @@ function StatusBadge({ status }: { status: BlindReview["status"] }) {
   );
 }
 
+// --- Review display side ---
 function ReviewSide({
   label,
   review,
   hidden,
 }: {
   label: string;
-  review: { rating: number; comment: string; quickTags: string[] } | null;
+  review: BlindReviewEntry | null;
   hidden: boolean;
 }) {
   if (hidden) {
@@ -76,7 +97,6 @@ function ReviewSide({
       </div>
     );
   }
-
   if (!review) {
     return (
       <div className="flex-1 bg-surface2 rounded-[var(--radius-md)] p-4 border border-border">
@@ -85,7 +105,6 @@ function ReviewSide({
       </div>
     );
   }
-
   return (
     <div className="flex-1 bg-surface2 rounded-[var(--radius-md)] p-4 border border-border">
       <p className="text-xs font-semibold text-muted mb-2">{label}</p>
@@ -109,8 +128,229 @@ function ReviewSide({
   );
 }
 
+// --- Write Review Modal ---
+function WriteReviewModal({
+  reviewId,
+  role,
+  onClose,
+  onSubmitted,
+}: {
+  reviewId: string;
+  role: "buyer" | "seller";
+  onClose: () => void;
+  onSubmitted: () => void;
+}) {
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [conditionMatch, setConditionMatch] = useState<"yes" | "no">("yes");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const tagOptions = role === "buyer" ? BUYER_TAGS : SELLER_TAGS;
+
+  function toggleTag(tag: string) {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  }
+
+  async function handleSubmit() {
+    if (rating === 0) {
+      setError("Please select a rating.");
+      return;
+    }
+    if (!comment.trim()) {
+      setError("Please write a comment.");
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+    try {
+      const supabase = createClient();
+      const reviewData: BlindReviewEntry = {
+        rating,
+        comment: comment.trim(),
+        quickTags: selectedTags,
+        conditionMatch,
+        submittedAt: new Date().toISOString(),
+      };
+
+      const field = role === "buyer" ? "buyer_review" : "seller_review";
+      const { error: updateErr } = await supabase
+        .from("blind_reviews")
+        .update({ [field]: reviewData })
+        .eq("id", reviewId);
+
+      if (updateErr) throw new Error(updateErr.message);
+
+      onSubmitted();
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to submit");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-card border border-border rounded-[var(--radius-lg)] p-6 w-full max-w-md max-h-[90vh] overflow-y-auto animate-fade-in">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-muted hover:text-foreground"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        <h2 className="font-heading font-bold text-lg text-foreground mb-1">
+          Write Your Review
+        </h2>
+        <p className="text-xs text-muted mb-5">
+          Your review will be hidden until the other party submits theirs.
+        </p>
+
+        <div className="space-y-5">
+          {/* Star Rating */}
+          <div>
+            <label className="text-xs font-medium text-foreground block mb-2">
+              Rating
+            </label>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setRating(n)}
+                  className="transition-transform hover:scale-110"
+                >
+                  <Star
+                    className={`h-7 w-7 ${
+                      n <= rating
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-border"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Comment */}
+          <div>
+            <label className="text-xs font-medium text-foreground block mb-1.5">
+              Comment
+            </label>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              rows={3}
+              placeholder="How was your experience?"
+              maxLength={500}
+              className="w-full bg-surface2 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-subtle focus:outline-none focus:ring-1 focus:ring-brand resize-none"
+            />
+            <p className="text-[10px] text-subtle mt-1">
+              {comment.length}/500
+            </p>
+          </div>
+
+          {/* Quick Tags */}
+          <div>
+            <label className="text-xs font-medium text-foreground block mb-2">
+              Quick Tags (optional)
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {tagOptions.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                    selectedTags.includes(tag)
+                      ? "bg-brand/15 text-brand border-brand/30"
+                      : "bg-surface2 text-muted border-border hover:text-foreground"
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Condition Match */}
+          <div>
+            <label className="text-xs font-medium text-foreground block mb-2">
+              Did the item match the described condition?
+            </label>
+            <div className="flex gap-3">
+              {(["yes", "no"] as const).map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setConditionMatch(val)}
+                  className={`flex-1 px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                    conditionMatch === val
+                      ? "bg-brand/10 text-brand border-brand"
+                      : "bg-surface2 text-muted border-border"
+                  }`}
+                >
+                  {val === "yes" ? "Yes" : "No"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {error && <p className="text-xs text-danger">{error}</p>}
+
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="w-full flex items-center justify-center gap-2 bg-brand text-white font-semibold text-sm py-2.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            Submit Review
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Main Reviews Page ---
 export default function ReviewsPage() {
   const { currentUser, isLoggedIn } = useAuth();
+  const supabase = createClient();
+
+  const [reviews, setReviews] = useState<BlindReview[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [writeModalReview, setWriteModalReview] = useState<{
+    id: string;
+    role: "buyer" | "seller";
+  } | null>(null);
+
+  const fetchReviews = useCallback(async () => {
+    if (!currentUser) return;
+    setLoading(true);
+
+    const { data } = await supabase
+      .from("blind_reviews")
+      .select(
+        `*, listings:listing_id(title), buyer:buyer_id(display_name, avatar_initials, profile_image), seller:seller_id(display_name, avatar_initials, profile_image)`,
+      )
+      .or(`buyer_id.eq.${currentUser.id},seller_id.eq.${currentUser.id}`)
+      .order("created_at", { ascending: false });
+
+    if (data) {
+      setReviews(data.map(dbBlindReviewToBlindReview));
+    }
+    setLoading(false);
+  }, [currentUser, supabase]);
+
+  useEffect(() => {
+    if (currentUser) fetchReviews();
+  }, [currentUser, fetchReviews]);
 
   if (!isLoggedIn || !currentUser) {
     return (
@@ -132,13 +372,8 @@ export default function ReviewsPage() {
     );
   }
 
-  const myReviews = BLIND_REVIEWS.filter(
-    (r) => r.buyerId === currentUser.id || r.sellerId === currentUser.id
-  );
-
   return (
     <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-10 animate-fade-in">
-      {/* Page Header */}
       <h1 className="font-heading font-bold text-2xl text-foreground mb-4">
         Blind Reviews
       </h1>
@@ -152,34 +387,26 @@ export default function ReviewsPage() {
         </p>
       </div>
 
-      {myReviews.length === 0 ? (
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <Loader2 className="h-6 w-6 text-muted animate-spin" />
+        </div>
+      ) : reviews.length === 0 ? (
         <EmptyState
           message="No reviews yet. Complete a transaction to leave a review."
           icon="&#x2B50;"
         />
       ) : (
         <div className="space-y-6">
-          {myReviews.map((review) => {
-            const listing = null as ({ title: string } | null);
-            const buyer = null as (User | null);
-            const seller = null as (User | null);
+          {reviews.map((review) => {
             const isBuyer = currentUser.id === review.buyerId;
-            const isSeller = currentUser.id === review.sellerId;
-
             const userHasSubmitted = isBuyer
               ? review.buyerReview !== null
               : review.sellerReview !== null;
             const otherHasSubmitted = isBuyer
               ? review.sellerReview !== null
               : review.buyerReview !== null;
-
             const isRevealed = review.status === "revealed";
-
-            // Determine if review content should be hidden
-            const showBuyerReview =
-              isRevealed || (isBuyer && review.buyerReview !== null);
-            const showSellerReview =
-              isRevealed || (isSeller && review.sellerReview !== null);
 
             const hasConditionMismatch =
               isRevealed &&
@@ -196,20 +423,14 @@ export default function ReviewsPage() {
                   <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div>
                       <h3 className="font-heading font-semibold text-foreground text-base mb-1">
-                        {listing
-                          ? truncate(listing.title, 60)
+                        {review.listingTitle
+                          ? truncate(review.listingTitle, 60)
                           : "Unknown Listing"}
                       </h3>
                       <div className="flex items-center gap-3 text-sm text-muted">
-                        <div className="flex items-center gap-1.5">
-                          <UserAvatar user={buyer} size="sm" />
-                          <span>{buyer?.displayName ?? "Unknown"}</span>
-                        </div>
+                        <span>{review.buyerName ?? "Buyer"}</span>
                         <span className="text-subtle">vs</span>
-                        <div className="flex items-center gap-1.5">
-                          <UserAvatar user={seller} size="sm" />
-                          <span>{seller?.displayName ?? "Unknown"}</span>
-                        </div>
+                        <span>{review.sellerName ?? "Seller"}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -232,21 +453,19 @@ export default function ReviewsPage() {
                 {/* Review Content */}
                 <div className="p-5">
                   {isRevealed ? (
-                    /* Both reviews visible */
                     <div className="flex flex-col sm:flex-row gap-4">
                       <ReviewSide
-                        label={`Buyer Review (${buyer?.displayName ?? "Unknown"})`}
+                        label={`Buyer Review (${review.buyerName ?? "Unknown"})`}
                         review={review.buyerReview}
                         hidden={false}
                       />
                       <ReviewSide
-                        label={`Seller Review (${seller?.displayName ?? "Unknown"})`}
+                        label={`Seller Review (${review.sellerName ?? "Unknown"})`}
                         review={review.sellerReview}
                         hidden={false}
                       />
                     </div>
                   ) : userHasSubmitted && !otherHasSubmitted ? (
-                    /* User submitted, other hasn't */
                     <div className="flex flex-col sm:flex-row gap-4">
                       <ReviewSide
                         label="Your Review"
@@ -262,7 +481,6 @@ export default function ReviewsPage() {
                       />
                     </div>
                   ) : !userHasSubmitted ? (
-                    /* User hasn't submitted */
                     <div className="flex flex-col items-center py-4">
                       {otherHasSubmitted && (
                         <div className="flex items-center gap-2 text-sm text-muted mb-4">
@@ -270,7 +488,15 @@ export default function ReviewsPage() {
                           The other party has already submitted their review
                         </div>
                       )}
-                      <button className="bg-brand text-white font-semibold text-sm px-6 py-2.5 rounded-lg hover:opacity-90 transition-opacity">
+                      <button
+                        onClick={() =>
+                          setWriteModalReview({
+                            id: review.id,
+                            role: isBuyer ? "buyer" : "seller",
+                          })
+                        }
+                        className="bg-brand text-white font-semibold text-sm px-6 py-2.5 rounded-lg hover:opacity-90 transition-opacity"
+                      >
                         Write Review
                       </button>
                     </div>
@@ -280,6 +506,16 @@ export default function ReviewsPage() {
             );
           })}
         </div>
+      )}
+
+      {/* Write Review Modal */}
+      {writeModalReview && (
+        <WriteReviewModal
+          reviewId={writeModalReview.id}
+          role={writeModalReview.role}
+          onClose={() => setWriteModalReview(null)}
+          onSubmitted={fetchReviews}
+        />
       )}
     </div>
   );
