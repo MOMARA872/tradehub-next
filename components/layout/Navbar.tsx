@@ -174,22 +174,22 @@ export function Navbar() {
         </Link>
 
         {/* Region Selector */}
-        <div className="relative hidden sm:block" ref={regionRef}>
+        <div className="relative" ref={regionRef}>
           <button
             onClick={() => setRegionOpen(!regionOpen)}
             className="flex items-center gap-1 text-xs text-muted hover:text-foreground transition-colors"
           >
             <MapPin className="h-3.5 w-3.5" />
-            <span className="max-w-[100px] truncate">{selectedRegion.name}</span>
-            <ChevronDown className="h-3 w-3" />
+            <span className="max-w-[80px] sm:max-w-[100px] truncate">{selectedRegion.name}</span>
+            <ChevronDown className={`h-3 w-3 transition-transform ${regionOpen ? "rotate-180" : ""}`} />
           </button>
           {regionOpen && (
-            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[160px] z-50 animate-fade-in">
+            <div className="absolute top-full left-0 mt-2 bg-card border border-border rounded-lg shadow-lg py-1.5 min-w-[180px] z-50 animate-fade-in">
               {REGIONS.map((r) => (
                 <button
                   key={r.id}
                   onClick={() => { setRegion(r.id); setRegionOpen(false); }}
-                  className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-surface3 transition-colors ${selectedRegion.id === r.id ? "text-brand font-semibold" : "text-foreground"}`}
+                  className={`block w-full text-left px-4 py-2 text-xs hover:bg-surface2 transition-colors ${selectedRegion.id === r.id ? "text-brand font-semibold bg-brand/5" : "text-foreground"}`}
                 >
                   {r.name}
                 </button>
