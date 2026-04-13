@@ -117,7 +117,7 @@ export default function ProfilePage() {
             src={user.coverImage}
             alt="Cover"
             fill
-            unoptimized
+            sizes="100vw"
             className="object-cover"
           />
         ) : (

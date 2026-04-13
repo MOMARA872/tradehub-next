@@ -4,7 +4,6 @@ import { CONDITIONS } from "@/lib/data/conditions";
 import { REGIONS } from "@/lib/data/regions";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { PhotoUpload } from "@/components/listing/PhotoUpload";
 import { formatPrice } from "@/lib/helpers/format";
 import {
   ArrowLeft,
@@ -13,71 +12,54 @@ import {
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import type { ConditionKey, Category } from "@/lib/types";
 import { toast } from "sonner";
 
-const STEPS = [
-  { number: 1, label: "Category" },
-  { number: 2, label: "Photos" },
-  { number: 3, label: "Details" },
-  { number: 4, label: "Pricing" },
-  { number: 5, label: "Review" },
-];
-
-const PRICE_TYPES = [
-  { value: "fixed", label: "Fixed Price" },
-  { value: "negotiable", label: "Negotiable" },
-  { value: "trade", label: "Trade" },
-  { value: "free", label: "Free" },
-];
-
-function StepIndicator({ currentStep }: { currentStep: number }) {
+function StepShimmer() {
   return (
-    <div className="flex items-center justify-center gap-0 mb-10">
-      {STEPS.map((step, index) => (
-        <div key={step.number} className="flex items-center">
-          <div className="flex flex-col items-center">
-            <div
-              className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
-                currentStep === step.number
-                  ? "bg-brand text-white"
-                  : currentStep > step.number
-                  ? "bg-success text-white"
-                  : "bg-surface3 text-subtle"
-              }`}
-            >
-              {currentStep > step.number ? (
-                <Check className="w-4 h-4" />
-              ) : (
-                step.number
-              )}
-            </div>
-            <span
-              className={`text-xs mt-1.5 whitespace-nowrap ${
-                currentStep === step.number
-                  ? "text-brand font-semibold"
-                  : currentStep > step.number
-                  ? "text-success font-medium"
-                  : "text-subtle"
-              }`}
-            >
-              {step.label}
-            </span>
-          </div>
-          {index < STEPS.length - 1 && (
-            <div
-              className={`w-12 sm:w-20 h-0.5 mx-1 sm:mx-2 mb-5 ${
-                currentStep > step.number ? "bg-success" : "bg-surface3"
-              }`}
-            />
-          )}
-        </div>
-      ))}
+    <div className="animate-pulse space-y-4">
+      <div className="h-6 bg-surface3 rounded w-1/3" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="h-20 bg-surface3 rounded-[var(--radius-md)]" />
+        ))}
+      </div>
     </div>
   );
 }
+
+const StepIndicator = dynamic(
+  () => import("@/components/post-new/StepIndicator").then((m) => m.StepIndicator),
+  { ssr: false, loading: () => <div className="h-16 mb-10" /> }
+);
+
+const CategoryStep = dynamic(
+  () => import("@/components/post-new/CategoryStep").then((m) => m.CategoryStep),
+  { ssr: false, loading: () => <StepShimmer /> }
+);
+
+const PhotosStep = dynamic(
+  () => import("@/components/post-new/PhotosStep").then((m) => m.PhotosStep),
+  { ssr: false, loading: () => <StepShimmer /> }
+);
+
+const DetailsStep = dynamic(
+  () => import("@/components/post-new/DetailsStep").then((m) => m.DetailsStep),
+  { ssr: false, loading: () => <StepShimmer /> }
+);
+
+const PricingStep = dynamic(
+  () => import("@/components/post-new/PricingStep").then((m) => m.PricingStep),
+  { ssr: false, loading: () => <StepShimmer /> }
+);
+
+const ReviewStep = dynamic(
+  () => import("@/components/post-new/ReviewStep").then((m) => m.ReviewStep),
+  { ssr: false, loading: () => <StepShimmer /> }
+);
 
 function PostNewWizard() {
   const router = useRouter();
@@ -120,9 +102,6 @@ function PostNewWizard() {
     .map((t) => t.trim())
     .filter(Boolean);
 
-  const categoryData = categories.find((c) => c.id === selectedCategory);
-  const conditionData = condition ? CONDITIONS[condition] : null;
-  const cityData = REGIONS.find((r) => r.id === city);
   const citiesFiltered = REGIONS.filter((r) => r.id !== "all");
 
   useEffect(() => {
@@ -303,483 +282,81 @@ function PostNewWizard() {
 
       {/* Step 1: Category */}
       {currentStep === 1 && (
-        <div className="animate-fade-in">
-          <h2 className="font-heading font-semibold text-lg text-foreground mb-4">
-            Choose a Category
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-6">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => {
-                  setSelectedCategory(cat.id);
-                  setSelectedSubcategory("");
-                }}
-                className={`flex flex-col items-center gap-2 p-4 rounded-[var(--radius-md)] border transition-all cursor-pointer ${
-                  selectedCategory === cat.id
-                    ? "ring-2 ring-brand border-brand bg-brand/5"
-                    : "border-border bg-card hover:border-muted"
-                }`}
-              >
-                <span className="text-2xl">{cat.icon}</span>
-                <span className="text-sm font-medium text-foreground">
-                  {cat.name}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {categoryData && (
-            <div className="bg-card border border-border rounded-[var(--radius-md)] p-5 animate-fade-in">
-              <h3 className="font-heading font-semibold text-sm text-foreground mb-3">
-                Select a Subcategory for{" "}
-                <span className="text-brand">{categoryData.name}</span>
-              </h3>
-              <div className="flex flex-col gap-2">
-                {categoryData.subcategories.map((sub) => (
-                  <label
-                    key={sub}
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border cursor-pointer transition-all ${
-                      selectedSubcategory === sub
-                        ? "border-brand bg-brand/5"
-                        : "border-border bg-surface hover:border-muted"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="subcategory"
-                      value={sub}
-                      checked={selectedSubcategory === sub}
-                      onChange={() => {
-                        setSelectedSubcategory(sub);
-                        setCustomSubcategory("");
-                      }}
-                      className="accent-[var(--color-brand)]"
-                    />
-                    <span className="text-sm text-foreground">{sub}</span>
-                  </label>
-                ))}
-                {/* Other — custom subcategory */}
-                <label
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border cursor-pointer transition-all ${
-                    selectedSubcategory === "__other__"
-                      ? "border-brand bg-brand/5"
-                      : "border-border bg-surface hover:border-muted"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="subcategory"
-                    value="__other__"
-                    checked={selectedSubcategory === "__other__"}
-                    onChange={() => setSelectedSubcategory("__other__")}
-                    className="accent-[var(--color-brand)]"
-                  />
-                  <span className="text-sm text-foreground">Other</span>
-                </label>
-                {selectedSubcategory === "__other__" && (
-                  <div className="ml-7 animate-fade-in">
-                    <input
-                      type="text"
-                      value={customSubcategory}
-                      onChange={(e) => setCustomSubcategory(e.target.value)}
-                      placeholder="Type your subcategory..."
-                      autoFocus
-                      className="w-full bg-surface2 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-subtle focus:outline-none focus:ring-1 focus:ring-brand"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+        <CategoryStep
+          categories={categories}
+          selectedCategory={selectedCategory}
+          selectedSubcategory={selectedSubcategory}
+          customSubcategory={customSubcategory}
+          onSelectCategory={(id) => {
+            setSelectedCategory(id);
+            setSelectedSubcategory("");
+          }}
+          onSelectSubcategory={(sub) => {
+            setSelectedSubcategory(sub);
+            if (sub !== "__other__") setCustomSubcategory("");
+          }}
+          onCustomSubcategoryChange={setCustomSubcategory}
+        />
       )}
 
       {/* Step 2: Photos */}
       {currentStep === 2 && (
-        <div className="animate-fade-in">
-          <h2 className="font-heading font-semibold text-lg text-foreground mb-4">
-            Add Photos
-          </h2>
-          <PhotoUpload
-            userId={currentUserId}
-            photos={photos}
-            onPhotosChange={setPhotos}
-            maxPhotos={10}
-          />
-        </div>
+        <PhotosStep
+          currentUserId={currentUserId}
+          photos={photos}
+          onPhotosChange={setPhotos}
+        />
       )}
 
       {/* Step 3: Details */}
       {currentStep === 3 && (
-        <div className="animate-fade-in space-y-5">
-          <h2 className="font-heading font-semibold text-lg text-foreground mb-1">
-            Listing Details
-          </h2>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              Title <span className="text-danger">*</span>
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Vintage Leather Jacket"
-              className="w-full px-4 py-2.5 rounded-[var(--radius-md)] border border-border bg-surface text-foreground text-sm placeholder:text-subtle focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              Description <span className="text-danger">*</span>
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe your item in detail..."
-              rows={4}
-              className="w-full px-4 py-2.5 rounded-[var(--radius-md)] border border-border bg-surface text-foreground text-sm placeholder:text-subtle focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand resize-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              Condition
-            </label>
-            <select
-              value={condition}
-              onChange={(e) => setCondition(e.target.value as ConditionKey | "")}
-              className="w-full px-4 py-2.5 rounded-[var(--radius-md)] border border-border bg-surface text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand"
-            >
-              <option value="">Select condition...</option>
-              {(Object.entries(CONDITIONS) as [ConditionKey, typeof CONDITIONS[ConditionKey]][]).map(
-                ([key, val]) => (
-                  <option key={key} value={key}>
-                    {val.emoji} {val.label} — {val.description}
-                  </option>
-                )
-              )}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              Condition Notes
-            </label>
-            <input
-              type="text"
-              value={conditionNotes}
-              onChange={(e) => setConditionNotes(e.target.value)}
-              placeholder="Any additional notes about the condition..."
-              className="w-full px-4 py-2.5 rounded-[var(--radius-md)] border border-border bg-surface text-foreground text-sm placeholder:text-subtle focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              Tags{" "}
-              <span className="text-subtle font-normal">(comma-separated)</span>
-            </label>
-            <input
-              type="text"
-              value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
-              placeholder="e.g. vintage, leather, jacket"
-              className="w-full px-4 py-2.5 rounded-[var(--radius-md)] border border-border bg-surface text-foreground text-sm placeholder:text-subtle focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand"
-            />
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {tags.map((tag, i) => (
-                  <span
-                    key={i}
-                    className="inline-block bg-brand/10 text-brand text-xs font-medium px-2.5 py-1 rounded-full"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <DetailsStep
+          title={title}
+          description={description}
+          condition={condition}
+          conditionNotes={conditionNotes}
+          tagsInput={tagsInput}
+          tags={tags}
+          onTitleChange={setTitle}
+          onDescriptionChange={setDescription}
+          onConditionChange={setCondition}
+          onConditionNotesChange={setConditionNotes}
+          onTagsInputChange={setTagsInput}
+        />
       )}
 
       {/* Step 4: Pricing */}
       {currentStep === 4 && (
-        <div className="animate-fade-in space-y-5">
-          <h2 className="font-heading font-semibold text-lg text-foreground mb-1">
-            Pricing &amp; Location
-          </h2>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2.5">
-              Price Type
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {PRICE_TYPES.filter((pt) => {
-                if (pt.value === "fixed") {
-                  return (
-                    currentUser?.tier === "pro" &&
-                    (currentUser?.subscriptionStatus === "active" ||
-                      currentUser?.subscriptionStatus === "trialing")
-                  );
-                }
-                return true;
-              }).map((pt) => (
-                <button
-                  key={pt.value}
-                  type="button"
-                  onClick={() => setPriceType(pt.value)}
-                  className={`px-4 py-2.5 rounded-[var(--radius-md)] border text-sm font-medium transition-all cursor-pointer ${
-                    priceType === pt.value
-                      ? "border-brand bg-brand/10 text-brand ring-2 ring-brand"
-                      : "border-border bg-surface text-foreground hover:border-muted"
-                  }`}
-                >
-                  {pt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {(priceType === "fixed" || priceType === "negotiable") && (
-            <div className="animate-fade-in">
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Price ($)
-              </label>
-              <input
-                type="number"
-                value={price || ""}
-                onChange={(e) => setPrice(Number(e.target.value))}
-                placeholder="0.00"
-                min={0}
-                step={0.01}
-                className="w-full px-4 py-2.5 rounded-[var(--radius-md)] border border-border bg-surface text-foreground text-sm placeholder:text-subtle focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand"
-              />
-            </div>
-          )}
-
-          <p className="text-xs text-muted mb-3">Enter a zip code, select a city, or both.</p>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              Zip Code
-            </label>
-            <input
-              type="text"
-              value={zipCode}
-              onChange={(e) => setZipCode(e.target.value.replace(/[^0-9-]/g, "").slice(0, 10))}
-              placeholder="e.g. 86301"
-              className="w-full px-4 py-2.5 rounded-[var(--radius-md)] border border-border bg-surface text-foreground text-sm placeholder:text-subtle focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              City / Region (optional)
-            </label>
-            <select
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-[var(--radius-md)] border border-border bg-surface text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand"
-            >
-              <option value="">None</option>
-              {citiesFiltered.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-        </div>
+        <PricingStep
+          priceType={priceType}
+          price={price}
+          city={city}
+          zipCode={zipCode}
+          onPriceTypeChange={setPriceType}
+          onPriceChange={setPrice}
+          onCityChange={setCity}
+          onZipCodeChange={setZipCode}
+        />
       )}
 
       {/* Step 5: Review & Submit */}
       {currentStep === 5 && (
-        <div className="animate-fade-in">
-          <h2 className="font-heading font-semibold text-lg text-foreground mb-5">
-            Review Your Listing
-          </h2>
-
-          <div className="bg-card border border-border rounded-[var(--radius-md)] divide-y divide-border">
-            {/* Category */}
-            <div className="flex items-center justify-between px-5 py-4">
-              <div>
-                <p className="text-xs text-subtle uppercase tracking-wide mb-0.5">
-                  Category
-                </p>
-                <p className="text-sm text-foreground font-medium">
-                  {categoryData?.icon} {categoryData?.name}
-                  {selectedSubcategory && (
-                    <span className="text-muted"> / {selectedSubcategory === "__other__" ? customSubcategory : selectedSubcategory}</span>
-                  )}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleGoToStep(1)}
-                className="text-xs text-brand font-medium hover:underline cursor-pointer"
-              >
-                Edit
-              </button>
-            </div>
-
-            {/* Photos */}
-            <div className="flex items-center justify-between px-5 py-4">
-              <div>
-                <p className="text-xs text-subtle uppercase tracking-wide mb-0.5">
-                  Photos
-                </p>
-                <p className="text-sm text-foreground font-medium">
-                  {photos.length} photo{photos.length !== 1 ? "s" : ""} uploaded
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleGoToStep(2)}
-                className="text-xs text-brand font-medium hover:underline cursor-pointer"
-              >
-                Edit
-              </button>
-            </div>
-
-            {/* Title & Description */}
-            <div className="flex items-start justify-between px-5 py-4">
-              <div className="flex-1 min-w-0 mr-4">
-                <p className="text-xs text-subtle uppercase tracking-wide mb-0.5">
-                  Title
-                </p>
-                <p className="text-sm text-foreground font-medium">
-                  {title || <span className="text-subtle italic">Not set</span>}
-                </p>
-                <p className="text-xs text-subtle uppercase tracking-wide mt-3 mb-0.5">
-                  Description
-                </p>
-                <p className="text-sm text-muted truncate">
-                  {description
-                    ? description.length > 120
-                      ? description.substring(0, 120) + "..."
-                      : description
-                    : "Not set"}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleGoToStep(3)}
-                className="text-xs text-brand font-medium hover:underline cursor-pointer flex-shrink-0"
-              >
-                Edit
-              </button>
-            </div>
-
-            {/* Condition */}
-            <div className="flex items-center justify-between px-5 py-4">
-              <div>
-                <p className="text-xs text-subtle uppercase tracking-wide mb-0.5">
-                  Condition
-                </p>
-                <p className="text-sm text-foreground font-medium">
-                  {conditionData ? (
-                    <>
-                      {conditionData.emoji} {conditionData.label}
-                      {conditionNotes && (
-                        <span className="text-muted font-normal">
-                          {" "}
-                          — {conditionNotes}
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    <span className="text-subtle italic">Not set</span>
-                  )}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleGoToStep(3)}
-                className="text-xs text-brand font-medium hover:underline cursor-pointer"
-              >
-                Edit
-              </button>
-            </div>
-
-            {/* Pricing */}
-            <div className="flex items-center justify-between px-5 py-4">
-              <div>
-                <p className="text-xs text-subtle uppercase tracking-wide mb-0.5">
-                  Price
-                </p>
-                <p className="text-sm text-foreground font-medium">
-                  {priceType === "free" || priceType === "trade"
-                    ? formatPrice(0, priceType as "fixed" | "free" | "trade" | "negotiable")
-                    : price > 0
-                    ? `${formatPrice(price, priceType as "fixed" | "free" | "trade" | "negotiable")}${
-                        priceType === "negotiable" ? " (Negotiable)" : ""
-                      }`
-                    : "Not set"}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleGoToStep(4)}
-                className="text-xs text-brand font-medium hover:underline cursor-pointer"
-              >
-                Edit
-              </button>
-            </div>
-
-            {/* City */}
-            <div className="flex items-center justify-between px-5 py-4">
-              <div>
-                <p className="text-xs text-subtle uppercase tracking-wide mb-0.5">
-                  Location
-                </p>
-                <p className="text-sm text-foreground font-medium">
-                  {cityData?.name || (
-                    <span className="text-subtle italic">Not set</span>
-                  )}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleGoToStep(4)}
-                className="text-xs text-brand font-medium hover:underline cursor-pointer"
-              >
-                Edit
-              </button>
-            </div>
-
-            {/* Tags */}
-            {tags.length > 0 && (
-              <div className="flex items-start justify-between px-5 py-4">
-                <div>
-                  <p className="text-xs text-subtle uppercase tracking-wide mb-1.5">
-                    Tags
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {tags.map((tag, i) => (
-                      <span
-                        key={i}
-                        className="inline-block bg-brand/10 text-brand text-xs font-medium px-2.5 py-1 rounded-full"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleGoToStep(3)}
-                  className="text-xs text-brand font-medium hover:underline cursor-pointer flex-shrink-0"
-                >
-                  Edit
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        <ReviewStep
+          selectedCategory={selectedCategory}
+          selectedSubcategory={selectedSubcategory}
+          customSubcategory={customSubcategory}
+          categories={categories}
+          photos={photos}
+          title={title}
+          description={description}
+          condition={condition}
+          conditionNotes={conditionNotes}
+          tags={tags}
+          priceType={priceType}
+          price={price}
+          city={city}
+          onGoToStep={handleGoToStep}
+        />
       )}
 
       {/* Navigation Buttons */}

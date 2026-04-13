@@ -83,3 +83,33 @@ Date: 2026-04-09
 - **Production logging**: `removeConsole` eliminates debug noise and slightly reduces bundle size.
 - **React render performance**: `memo`, `useCallback`, and `useMemo` in browse/listing components reduce unnecessary re-renders during search/filter interactions.
 - **CDN caching**: Cache-Control headers on browse/search/listing routes allow CDN and shared caches to serve responses for up to 24 hours (s-maxage=86400), with stale-while-revalidate keeping UX fast during background revalidation.
+
+## Round 3 Optimizations
+
+Date: 2026-04-09
+
+### Features Implemented
+
+1. **Vercel Analytics** (Agent 1) — `app/layout.tsx`: Added `<Analytics />` component from `@vercel/analytics/react` for production web vitals and page-view tracking.
+2. **generateStaticParams on listing page** (Agent 1) — `app/(main)/listing/[id]/page.tsx`: Fetches up to 50 active listing IDs at build time so listing detail pages are pre-rendered as static (ISR, `revalidate=3600`).
+3. **Suspense skeletons** (Agent 1) — `app/(main)/browse/page.tsx`, `app/(main)/search/page.tsx`, `app/(auth)/login/page.tsx`: Wrapped async content in `<Suspense>` with skeleton fallbacks to improve perceived load time.
+4. **Post-new wizard split into 6 dynamic step components** (Agent 2) — `app/(main)/post-new/page.tsx` + `components/post-new/Step[1-6].tsx`: Wizard steps are now dynamically imported, reducing initial JS for the post-new route.
+5. **Narrowed Supabase queries** (Agent 2) — `app/(main)/listing/[id]/page.tsx`, `app/(main)/profile/[id]/page.tsx`: Select only the columns required by each page instead of `*`.
+6. **Profile cover image sizes** (Agent 2) — `components/user/ProfileCover.tsx`: Added `sizes` attribute to the cover `<Image>` component for responsive image optimization.
+7. **`app/sitemap.ts`** (Agent 2): Dynamic XML sitemap generated at build time using active listing IDs and profile IDs from Supabase.
+8. **`app/(main)/error.tsx`** (Agent 3): Client error boundary for the `(main)` route group. Displays `AlertTriangle` icon and a "Try again" button that calls `reset()`.
+9. **`app/(auth)/error.tsx`** (Agent 3): Client error boundary for the `(auth)` route group. Minimal centered layout with "Authentication Error" heading and reset button.
+
+### Build Result
+
+- Status: **PASS** — compiled successfully, 0 errors, 0 warnings
+- Compile time: 3.8s (Turbopack)
+- Routes: 31 (26 static, 4 dynamic, 1 proxy/middleware)
+- Fixes required (3):
+  1. `generateStaticParams` called `createClient()` (server client using `cookies()`), which is illegal at build time. Fixed by using the public browser client (`createPublicClient()`) in that function only.
+  2. The narrowed listing query was missing `lat`, `lng`, `location_confirmed` fields required by `DbListing`. Added to both the main and similar-listings selects.
+  3. The narrowed profile query used wrong column names (`avatar_url`, `joined_at`) and was missing many fields required by `DbProfile`. Replaced with the full column list matching the interface.
+
+### Link Prefetch Status
+
+`components/listing/ListingCard.tsx` uses `<Link href={...} className="...">` with **no `prefetch` prop**. Next.js default behaviour applies: in production, visible links are prefetched automatically via the intersection observer. No change needed.

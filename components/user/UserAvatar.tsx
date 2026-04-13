@@ -23,7 +23,6 @@ function UserAvatar({ user, size = 'md' }: { user: MinimalUser | null; size?: 's
           alt={user.displayName}
           width={px}
           height={px}
-          unoptimized
           className="h-full w-full object-cover"
           title={user.displayName}
         />

@@ -64,5 +64,17 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Add cache headers for public, read-heavy routes
+  const publicCachePaths = ["/browse", "/search", "/listing/", "/community", "/premium"];
+  const isPublicCacheable = publicCachePaths.some((p) =>
+    request.nextUrl.pathname.startsWith(p)
+  );
+  if (isPublicCacheable && !isProtected) {
+    supabaseResponse.headers.set(
+      "Cache-Control",
+      "public, s-maxage=3600, stale-while-revalidate=43200"
+    );
+  }
+
   return supabaseResponse;
 }

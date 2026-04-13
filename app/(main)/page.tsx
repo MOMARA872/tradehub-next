@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+
+export const revalidate = 3600; // ISR: revalidate homepage every hour
 import { createClient } from "@/lib/supabase/server";
 import { dbListingToListing } from "@/lib/types";
 import { ListingCard } from "@/components/listing/ListingCard";

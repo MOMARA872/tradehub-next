@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+
+export const revalidate = 3600; // ISR: revalidate listing pages every hour
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createPublicClient } from "@/lib/supabase/client";
 import { REVIEWS } from "@/lib/data/reviews";
 import { CONDITIONS } from "@/lib/data/conditions";
 import { dbListingToListing, dbProfileToUser } from "@/lib/types";
@@ -13,19 +16,26 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { PhotoGallery } from "@/components/listing/PhotoGallery";
 import { OfferButton } from "@/components/listing/OfferButton";
 import { MessageSellerButton } from "@/components/listing/MessageSellerButton";
+import { ListingActions } from "@/components/listing/ListingActions";
 import {
   ArrowLeft,
   MapPin,
   Calendar,
-  Eye,
   Tag,
-
   Shield,
   CheckCircle,
-  Heart,
-  Flag,
-  Share2,
 } from "lucide-react";
+
+export async function generateStaticParams() {
+  const supabase = createPublicClient();
+  const { data } = await supabase
+    .from("listings")
+    .select("id")
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(50);
+  return (data ?? []).map((row) => ({ id: row.id }));
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -53,7 +63,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
 
   const { data: listingRow } = await supabase
     .from("listings")
-    .select("*")
+    .select("id, user_id, category_id, title, description, photos, price, price_type, condition, condition_notes, tags, city, zip_code, subcategory, status, created_at, views_count, lat, lng, location_confirmed")
     .eq("id", id)
     .single();
 
@@ -73,15 +83,15 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
     { data: offerRows },
     { data: similarRows },
   ] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", listingRow.user_id).single(),
-    supabase.from("categories").select("*").eq("id", listingRow.category_id).single(),
+    supabase.from("profiles").select("id, display_name, avatar_initials, profile_image, city, bio, is_verified, rating_avg, review_count, trust_score, response_rate, listing_count, created_at, last_display_name_edit_at, cover_image, tier, stripe_customer_id, stripe_subscription_id, subscription_status, trial_ends_at").eq("id", listingRow.user_id).single(),
+    supabase.from("categories").select("id, name").eq("id", listingRow.category_id).single(),
     supabase
       .from("offers")
       .select("*, profiles(display_name, avatar_initials)")
       .eq("listing_id", id),
     supabase
       .from("listings")
-      .select("*")
+      .select("id, user_id, category_id, title, description, photos, price, price_type, condition, condition_notes, tags, city, zip_code, subcategory, status, created_at, views_count, lat, lng, location_confirmed")
       .eq("category_id", listingRow.category_id)
       .neq("id", id)
       .eq("status", "active")
@@ -179,31 +189,8 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               <dd className="text-foreground font-mono">{listing.id.slice(0, 8)}</dd>
               <dt className="text-subtle">posted:</dt>
               <dd className="text-foreground">{formatDate(listing.createdAt)}</dd>
-              <dt className="text-subtle">views:</dt>
-              <dd className="text-foreground flex items-center gap-1">
-                <Eye className="h-3.5 w-3.5" /> {listingRow.views_count ?? 0}
-              </dd>
             </dl>
-            <div className="flex items-center gap-5 mt-4">
-              <button
-                type="button"
-                className="flex items-center gap-1.5 hover:text-brand transition-colors"
-              >
-                <Heart className="h-3.5 w-3.5" /> save
-              </button>
-              <button
-                type="button"
-                className="flex items-center gap-1.5 hover:text-brand transition-colors"
-              >
-                <Flag className="h-3.5 w-3.5" /> report
-              </button>
-              <button
-                type="button"
-                className="flex items-center gap-1.5 hover:text-brand transition-colors"
-              >
-                <Share2 className="h-3.5 w-3.5" /> share
-              </button>
-            </div>
+            <ListingActions listingId={listing.id} listingTitle={listing.title} />
           </div>
 
           {offers.length > 0 && (

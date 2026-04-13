@@ -31,7 +31,6 @@ export function PhotoGallery({
           src={displayPhotos[activePhoto]}
           alt={title}
           fill
-          unoptimized
           className="object-contain"
           sizes="(max-width: 1024px) 100vw, 66vw"
           priority
@@ -73,7 +72,7 @@ export function PhotoGallery({
                   : "border-border opacity-60 hover:opacity-100"
               }`}
             >
-              <Image src={p} alt={`Photo ${i + 1}`} fill unoptimized className="object-contain" sizes="64px" />
+              <Image src={p} alt={`Photo ${i + 1}`} fill className="object-contain" sizes="64px" />
             </button>
           ))}
         </div>
