@@ -7,7 +7,7 @@ import { dbListingToListing } from "@/lib/types";
 import { ListingCard } from "@/components/listing/ListingCard";
 import { CategoryCard } from "@/components/category/CategoryCard";
 import { HeroHighlight } from "@/components/ui/hero-highlight-css";
-import { TextRotate } from "@/components/ui/text-rotate-css";
+import { HeroTextRotate } from "@/components/home/HeroTextRotate";
 import { StackedCards } from "@/components/ui/stacked-cards-css";
 import { TestimonialsColumn } from "@/components/ui/testimonials-marquee";
 import { HomeSearchBar } from "@/components/home/HomeSearchBar";
@@ -67,7 +67,7 @@ export default async function HomePage() {
           >
             <h1 className="flex flex-wrap items-center justify-center gap-x-3">
               <span>Buy, Sell, Trade,</span>
-              <TextRotate texts={["Connect", "Barter", "Share", "Thrive", "Swap"]} />
+              <HeroTextRotate />
             </h1>
           </div>
           <p
