@@ -232,7 +232,7 @@ function PostNewWizard() {
           price_type: priceType,
           condition: (condition || "good") as ConditionKey,
           condition_notes: conditionNotes.trim(),
-          city: city || "Prescott, AZ",
+          city: city || (zipCode.trim() ? "" : "Prescott, AZ"),
           zip_code: zipCode.trim(),
           lat: selectedCity ? selectedCity.lat + jitterLat : null,
           lng: selectedCity ? selectedCity.lng + jitterLng : null,
@@ -560,27 +560,11 @@ function PostNewWizard() {
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              City / Region
-            </label>
-            <select
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-[var(--radius-md)] border border-border bg-surface text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand"
-            >
-              <option value="">Select a city...</option>
-              {citiesFiltered.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <p className="text-xs text-muted mb-3">Enter a zip code, select a city, or both.</p>
 
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">
-              Zip Code (optional)
+              Zip Code
             </label>
             <input
               type="text"
@@ -589,6 +573,24 @@ function PostNewWizard() {
               placeholder="e.g. 86301"
               className="w-full px-4 py-2.5 rounded-[var(--radius-md)] border border-border bg-surface text-foreground text-sm placeholder:text-subtle focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">
+              City / Region (optional)
+            </label>
+            <select
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-[var(--radius-md)] border border-border bg-surface text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand"
+            >
+              <option value="">None</option>
+              {citiesFiltered.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
           </div>
 
         </div>

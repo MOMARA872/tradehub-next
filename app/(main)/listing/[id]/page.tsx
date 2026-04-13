@@ -143,7 +143,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           </div>
 
           <div className="flex flex-wrap gap-4 text-xs text-muted">
-            <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {listing.city}{listing.zipCode ? ` ${listing.zipCode}` : ""}</span>
+            <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {[listing.city, listing.zipCode].filter(Boolean).join(" ") || "No location"}</span>
             <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {formatDate(listing.createdAt)}</span>
             {category && (
               <span className="flex items-center gap-1"><Tag className="h-3.5 w-3.5" /> {category.name} &rsaquo; {listing.subcategory}</span>
