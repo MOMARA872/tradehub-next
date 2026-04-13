@@ -20,6 +20,7 @@ export function SearchContent() {
   const router = useRouter();
 
   const initialQuery = searchParams.get("q") || "";
+  const initialZip = searchParams.get("zip") || "";
   const initialCategory = searchParams.get("category") || undefined;
   const page = parseInt(searchParams.get("page") || "1", 10);
 
@@ -51,6 +52,11 @@ export function SearchContent() {
 
     if (q) {
       queryBuilder = queryBuilder.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
+    }
+
+    const zip = searchParams.get("zip") || "";
+    if (zip) {
+      queryBuilder = queryBuilder.eq("zip_code", zip);
     }
 
     if (filters.categoryId) {
@@ -110,7 +116,9 @@ export function SearchContent() {
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
   const currentSearchParams: Record<string, string> = {};
   const q = searchParams.get("q");
+  const zipParam = searchParams.get("zip");
   if (q) currentSearchParams.q = q;
+  if (zipParam) currentSearchParams.zip = zipParam;
   if (filters.categoryId) currentSearchParams.category = filters.categoryId;
 
   return (
@@ -150,6 +158,11 @@ export function SearchContent() {
           {q && (
             <>
               {" "}for <span className="text-foreground font-medium">&ldquo;{q}&rdquo;</span>
+            </>
+          )}
+          {zipParam && (
+            <>
+              {" "}in <span className="text-foreground font-medium">{zipParam}</span>
             </>
           )}
         </p>
