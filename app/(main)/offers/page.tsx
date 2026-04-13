@@ -20,6 +20,7 @@ import {
   Check,
   X,
   Loader2,
+  Lock,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -117,7 +118,7 @@ export default function OffersPage() {
       supabase,
       userId: offer.buyer_id,
       type: newStatus === "accepted" ? "offer_accepted" : "offer_declined",
-      icon: newStatus === "accepted" ? "✅" : "❌",
+      icon: newStatus === "accepted" ? "check" : "x",
       title: `Offer ${newStatus}`,
       body: listing ? `Your offer on "${listing.title}" was ${newStatus}` : `Your offer was ${newStatus}`,
       link: "/offers",
@@ -139,7 +140,7 @@ export default function OffersPage() {
   if (!currentUser) {
     return (
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 text-center animate-fade-in">
-        <div className="text-5xl mb-4">🔒</div>
+        <div className="flex justify-center mb-4"><Lock className="h-12 w-12 text-muted" /></div>
         <h1 className="font-heading font-bold text-2xl text-foreground mb-2">
           Sign in to view your offers
         </h1>
@@ -204,7 +205,7 @@ export default function OffersPage() {
               ? "No offers received yet"
               : "You haven't sent any offers yet"
           }
-          icon="📭"
+          icon="Mailbox"
         />
       ) : (
         <div className="flex flex-col gap-4">

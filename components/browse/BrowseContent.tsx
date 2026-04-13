@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { Pagination } from "@/components/common/Pagination";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { CategoryIcon } from "@/lib/helpers/categoryIcon";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -154,7 +155,7 @@ export function BrowseContent() {
   if (!category) {
     return (
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-10">
-        <EmptyState message="Category not found" icon="🔍" />
+        <EmptyState message="Category not found" icon="Search" />
       </div>
     );
   }
@@ -172,7 +173,7 @@ export function BrowseContent() {
         <span className="text-foreground font-medium">{category.name}</span>
       </div>
       <div className="flex items-center gap-3 mb-2">
-        <span className="text-3xl">{category.icon}</span>
+        <CategoryIcon name={category.icon} className="h-8 w-8" />
         <div>
           <h1 className="font-heading font-bold text-2xl text-foreground">{category.name}</h1>
           <p className="text-sm text-muted">{category.description}</p>
@@ -211,7 +212,7 @@ export function BrowseContent() {
           />
         </>
       ) : (
-        <EmptyState message={`No listings in ${category.name} yet`} icon="📭" />
+        <EmptyState message={`No listings in ${category.name} yet`} icon="Mailbox" />
       )}
     </div>
   );

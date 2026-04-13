@@ -19,9 +19,9 @@ export interface BoostedListing {
 }
 
 export const BOOST_PLANS: BoostPlan[] = [
-  { id: 'boost_basic', name: 'Basic Boost', duration: '3 days', price: 2.99, multiplier: '2x', color: '#3B82F6', icon: '⚡' },
-  { id: 'boost_pro', name: 'Pro Boost', duration: '7 days', price: 6.99, multiplier: '5x', color: '#8B5CF6', icon: '🔥', popular: true },
-  { id: 'boost_ultra', name: 'Ultra Boost', duration: '14 days', price: 11.99, multiplier: '10x', color: '#F59E0B', icon: '🚀' },
+  { id: 'boost_basic', name: 'Basic Boost', duration: '3 days', price: 2.99, multiplier: '2x', color: '#3B82F6', icon: 'Zap' },
+  { id: 'boost_pro', name: 'Pro Boost', duration: '7 days', price: 6.99, multiplier: '5x', color: '#8B5CF6', icon: 'Flame', popular: true },
+  { id: 'boost_ultra', name: 'Ultra Boost', duration: '14 days', price: 11.99, multiplier: '10x', color: '#F59E0B', icon: 'Rocket' },
 ];
 
 export const BOOSTED_LISTINGS: BoostedListing[] = [

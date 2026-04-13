@@ -318,7 +318,7 @@ function MessagesInner() {
   if (!currentUser) {
     return (
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-16">
-        <EmptyState message="Please log in to view messages" icon="🔒" />
+        <EmptyState message="Please log in to view messages" icon="Lock" />
       </div>
     );
   }
@@ -366,7 +366,7 @@ function MessagesInner() {
               </div>
             ) : filteredThreads.length === 0 ? (
               <div className="py-12">
-                <EmptyState message="No conversations yet" icon="💬" />
+                <EmptyState message="No conversations yet" icon="MessageSquare" />
               </div>
             ) : (
               filteredThreads.map((thread) => {
@@ -539,7 +539,7 @@ function MessagesInner() {
             <div className="flex-1 flex items-center justify-center">
               <EmptyState
                 message="Select a conversation to start messaging"
-                icon="💬"
+                icon="MessageSquare"
               />
             </div>
           )}

@@ -70,7 +70,7 @@ export function MessageSellerButton({ listingId, sellerId, listingTitle }: Props
         supabase,
         userId: sellerId,
         type: "new_message_thread",
-        icon: "💬",
+        icon: "MessageSquare",
         title: "New message",
         body: `Someone wants to chat about "${listingTitle}"`,
         link: `/messages?thread=${newThread.id}`,

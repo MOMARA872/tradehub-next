@@ -6,11 +6,11 @@ export interface VerificationLevel {
 }
 
 export const VERIFICATION_LEVELS: Record<string, VerificationLevel> = {
-  phone: { label: 'Phone Verified', icon: '📱', color: '#3B82F6', weight: 20 },
-  email: { label: 'Email Verified', icon: '📧', color: '#8B5CF6', weight: 15 },
-  id: { label: 'ID Verified', icon: '🪪', color: '#10B981', weight: 30 },
-  address: { label: 'Address Verified', icon: '📍', color: '#F59E0B', weight: 20 },
-  social: { label: 'Social Linked', icon: '🔗', color: '#EC4899', weight: 15 },
+  phone: { label: 'Phone Verified', icon: 'Phone', color: '#3B82F6', weight: 20 },
+  email: { label: 'Email Verified', icon: 'Mail', color: '#8B5CF6', weight: 15 },
+  id: { label: 'ID Verified', icon: 'IdCard', color: '#10B981', weight: 30 },
+  address: { label: 'Address Verified', icon: 'MapPin', color: '#F59E0B', weight: 20 },
+  social: { label: 'Social Linked', icon: 'Link', color: '#EC4899', weight: 15 },
 };
 
 export interface VerificationRequest {

@@ -145,7 +145,7 @@ export default function SettingsPage() {
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-muted">Verified</span>
-              <span className="text-foreground">{currentUser.isVerified ? "Yes ✓" : "No"}</span>
+              <span className="inline-flex items-center gap-1 text-foreground">{currentUser.isVerified ? (<><Check className="h-3 w-3 text-emerald-500" />Yes</>) : "No"}</span>
             </div>
           </div>
         </section>

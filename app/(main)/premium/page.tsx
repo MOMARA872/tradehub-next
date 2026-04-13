@@ -2,7 +2,9 @@
 
 import { useAuth } from "@/hooks/useAuth";
 import { PREMIUM_PLANS, USER_SUBSCRIPTIONS } from "@/lib/data/premium";
-import { Check, Crown, Star } from "lucide-react";
+import { Check, Crown, Star, CircleDot, Gem, type LucideIcon } from "lucide-react";
+
+const PLAN_ICONS: Record<string, LucideIcon> = { CircleDot, Star, Gem };
 import Link from "next/link";
 
 export default function PremiumPage() {
@@ -67,7 +69,7 @@ export default function PremiumPage() {
 
               {/* Icon & Name */}
               <div className="text-center mb-4 mt-2">
-                <div className="text-4xl mb-2">{plan.icon}</div>
+                <div className="flex justify-center mb-2">{(() => { const Icon = PLAN_ICONS[plan.icon]; return Icon ? <Icon className="h-9 w-9" /> : null; })()}</div>
                 <h2 className="font-heading font-bold text-lg text-foreground">
                   {plan.name}
                 </h2>

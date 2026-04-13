@@ -2,7 +2,9 @@
 
 import { useAuth } from "@/hooks/useAuth";
 import { BOOST_PLANS, BOOSTED_LISTINGS } from "@/lib/data/boost";
-import { Zap, TrendingUp, Check } from "lucide-react";
+import { Zap, TrendingUp, Check, Flame, Rocket, Lock, type LucideIcon } from "lucide-react";
+
+const BOOST_ICONS: Record<string, LucideIcon> = { Zap, Flame, Rocket };
 import Link from "next/link";
 
 export default function BoostPage() {
@@ -11,7 +13,7 @@ export default function BoostPage() {
   if (!isLoggedIn || !currentUser) {
     return (
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 text-center animate-fade-in">
-        <div className="text-5xl mb-4">&#x1f512;</div>
+        <div className="flex justify-center mb-4"><Lock className="h-12 w-12 text-muted" /></div>
         <h1 className="font-heading font-bold text-2xl text-foreground mb-2">
           Sign in to boost listings
         </h1>
@@ -68,7 +70,7 @@ export default function BoostPage() {
             <div className="p-5 flex flex-col flex-1">
               {/* Icon + Name */}
               <div className="text-center mb-4">
-                <span className="text-3xl">{plan.icon}</span>
+                <span className="flex justify-center">{(() => { const Icon = BOOST_ICONS[plan.icon]; return Icon ? <Icon className="h-8 w-8" /> : null; })()}</span>
                 <h3 className="font-heading font-bold text-foreground text-lg mt-2">
                   {plan.name}
                 </h3>

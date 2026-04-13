@@ -3,7 +3,12 @@
 import { CATEGORIES } from "@/lib/data/categories";
 import { CONDITIONS } from "@/lib/data/conditions";
 import type { ConditionKey, PriceType, SearchFilters } from "@/lib/types";
-import { X } from "lucide-react";
+import { X, Sparkles, Star, ThumbsUp, RefreshCw, Clock, type LucideIcon } from "lucide-react";
+import { CategoryIcon } from "@/lib/helpers/categoryIcon";
+
+const CONDITION_ICONS: Record<string, LucideIcon> = {
+  Sparkles, Star, ThumbsUp, RefreshCw, Clock,
+};
 
 interface FilterSidebarProps {
   filters: SearchFilters;
@@ -72,8 +77,8 @@ export function FilterSidebar({ filters, onFiltersChange, resultCount }: FilterS
                   onChange={() => setFilter("categoryId", cat.id)}
                   className="accent-[var(--brand)]"
                 />
-                <span className="text-xs text-muted group-hover:text-foreground transition-colors">
-                  {cat.icon} {cat.name}
+                <span className="flex items-center gap-1 text-xs text-muted group-hover:text-foreground transition-colors">
+                  <CategoryIcon name={cat.icon} className="h-3 w-3" /> {cat.name}
                 </span>
               </label>
             ))}
@@ -104,8 +109,8 @@ export function FilterSidebar({ filters, onFiltersChange, resultCount }: FilterS
                     onChange={() => setFilter("condition", key)}
                     className="accent-[var(--brand)]"
                   />
-                  <span className="text-xs text-muted group-hover:text-foreground transition-colors">
-                    {cond.emoji} {cond.label}
+                  <span className="flex items-center gap-1 text-xs text-muted group-hover:text-foreground transition-colors">
+                    {(() => { const Icon = CONDITION_ICONS[cond.emoji]; return Icon ? <Icon className="h-3 w-3" /> : null; })()} {cond.label}
                   </span>
                 </label>
               )

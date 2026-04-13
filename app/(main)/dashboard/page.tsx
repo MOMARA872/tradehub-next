@@ -12,6 +12,8 @@ import {
   MessageSquare,
   Search,
   MapPin,
+  Lock,
+  Package,
 } from "lucide-react";
 import Link from "next/link";
 import { UpgradeBanner } from "@/components/dashboard/UpgradeBanner";
@@ -25,7 +27,7 @@ export default function DashboardPage() {
   if (!isLoggedIn || !currentUser) {
     return (
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 text-center animate-fade-in">
-        <div className="text-5xl mb-4">🔒</div>
+        <div className="flex justify-center mb-4"><Lock className="h-12 w-12 text-muted" /></div>
         <h1 className="font-heading font-bold text-2xl text-foreground mb-2">
           Sign in to view your dashboard
         </h1>
@@ -184,7 +186,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="bg-card border border-border rounded-[var(--radius-md)] p-10 text-center">
-            <div className="text-4xl mb-3">📦</div>
+            <div className="flex justify-center mb-3"><Package className="h-10 w-10 text-muted" /></div>
             <p className="text-muted text-sm mb-4">
               You haven&apos;t posted any listings yet.
             </p>

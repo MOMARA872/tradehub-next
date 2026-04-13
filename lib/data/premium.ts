@@ -20,17 +20,17 @@ export interface UserSubscription {
 
 export const PREMIUM_PLANS: PremiumPlan[] = [
   {
-    id: 'free', name: 'Free', price: 0, period: 'forever', icon: '🆓', color: 'var(--text3)',
+    id: 'free', name: 'Free', price: 0, period: 'forever', icon: 'CircleDot', color: 'var(--text3)',
     features: ['5 active listings', 'Basic search', 'Standard profile', 'Community board access', 'Trade chain (Personal mode)'],
     limits: { maxListings: 5, boostCredits: 0, analyticsAccess: false, prioritySupport: false, verifiedBadge: false },
   },
   {
-    id: 'plus', name: 'TradeHub Plus', price: 4.99, period: 'month', icon: '⭐', color: 'var(--accent2)', popular: true,
+    id: 'plus', name: 'TradeHub Plus', price: 4.99, period: 'month', icon: 'Star', color: 'var(--accent2)', popular: true,
     features: ['25 active listings', 'Saved searches + SMS alerts', 'Listing analytics dashboard', '1 free boost per month', 'Priority in search results', 'Enhanced profile badge'],
     limits: { maxListings: 25, boostCredits: 1, analyticsAccess: true, prioritySupport: false, verifiedBadge: true },
   },
   {
-    id: 'pro', name: 'TradeHub Pro', price: 12.99, period: 'month', icon: '💎', color: 'var(--accent1)',
+    id: 'pro', name: 'TradeHub Pro', price: 12.99, period: 'month', icon: 'Gem', color: 'var(--accent1)',
     features: ['Unlimited listings', 'All Plus features', '3 free boosts per month', 'Advanced analytics & exports', 'Priority support', 'Featured seller badge', 'Resume builder access', 'Trade chain Project Mode'],
     limits: { maxListings: -1, boostCredits: 3, analyticsAccess: true, prioritySupport: true, verifiedBadge: true },
   },

@@ -265,7 +265,7 @@ export function SearchContent() {
           ) : (
             <EmptyState
               message={q ? `No results for "${q}"` : "No listings match your filters"}
-              icon="🔍"
+              icon="Search"
             />
           )}
         </div>

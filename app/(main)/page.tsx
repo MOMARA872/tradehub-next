@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, FileEdit, Camera, MessageCircle, Handshake, type LucideIcon } from "lucide-react";
+
+const HOW_IT_WORKS_ICONS: Record<string, LucideIcon> = {
+  FileEdit, Camera, MessageCircle, Handshake,
+};
 
 export const revalidate = 3600; // ISR: revalidate homepage every hour
 import { createClient } from "@/lib/supabase/server";
@@ -25,10 +29,10 @@ const testimonials = [
 ];
 
 const howItWorks = [
-  { icon: "📝", title: "Create Account", description: "Sign up in seconds and set up your profile." },
-  { icon: "📸", title: "Post a Listing", description: "Add photos and details about what you're offering." },
-  { icon: "💬", title: "Get Offers", description: "Receive offers, negotiate, and chat with buyers." },
-  { icon: "🤝", title: "Make a Deal", description: "Agree on terms and complete the trade." },
+  { icon: "FileEdit", title: "Create Account", description: "Sign up in seconds and set up your profile." },
+  { icon: "Camera", title: "Post a Listing", description: "Add photos and details about what you're offering." },
+  { icon: "MessageCircle", title: "Get Offers", description: "Receive offers, negotiate, and chat with buyers." },
+  { icon: "Handshake", title: "Make a Deal", description: "Agree on terms and complete the trade." },
 ];
 
 export default async function HomePage() {
@@ -174,7 +178,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {howItWorks.map((step, i) => (
               <div key={i} className="text-center">
-                <div className="text-4xl mb-3">{step.icon}</div>
+                <div className="flex justify-center mb-3">{(() => { const Icon = HOW_IT_WORKS_ICONS[step.icon]; return Icon ? <Icon className="h-10 w-10 text-brand" /> : null; })()}</div>
                 <h3 className="font-heading font-semibold text-foreground text-sm mb-2">
                   {step.title}
                 </h3>

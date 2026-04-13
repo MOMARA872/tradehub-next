@@ -10,6 +10,7 @@ import {
   ArrowRight,
   Check,
   Loader2,
+  Lock,
 } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -246,7 +247,7 @@ function PostNewWizard() {
   if (!currentUserId) {
     return (
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 text-center animate-fade-in">
-        <div className="text-5xl mb-4">🔒</div>
+        <div className="flex justify-center mb-4"><Lock className="h-12 w-12 text-muted" /></div>
         <h1 className="font-heading font-bold text-2xl text-foreground mb-2">
           Sign in to post a listing
         </h1>

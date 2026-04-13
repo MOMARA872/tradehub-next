@@ -1,5 +1,9 @@
 import { VERIFICATION_REQUESTS, VERIFICATION_LEVELS } from "@/lib/data/verification";
-import { Shield } from "lucide-react";
+import { Shield, Check, Square, Phone, Mail, IdCard, MapPin, Link, type LucideIcon } from "lucide-react";
+
+const VERIFICATION_ICONS: Record<string, LucideIcon> = {
+  Phone, Mail, IdCard, MapPin, Link,
+};
 
 const BADGE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
   platinum: { bg: "bg-gradient-to-r from-purple-500 to-purple-700", text: "text-white", label: "Platinum" },
@@ -62,9 +66,14 @@ export function VerificationProgress({ userId }: { userId: string }) {
           const completed = request.verifications.includes(key);
           return (
             <div key={key} className="flex items-center gap-2 text-xs">
-              <span>{completed ? "✅" : "⬜"}</span>
-              <span className={completed ? "text-foreground" : "text-subtle"}>
-                {level.icon} {level.label}
+              {completed ? (
+                <Check className="h-3 w-3 text-emerald-500 shrink-0" />
+              ) : (
+                <Square className="h-3 w-3 text-subtle shrink-0" />
+              )}
+              <span className={`flex items-center gap-1 ${completed ? "text-foreground" : "text-subtle"}`}>
+                {(() => { const Icon = VERIFICATION_ICONS[level.icon]; return Icon ? <Icon className="h-3 w-3" /> : null; })()}
+                {level.label}
               </span>
             </div>
           );

@@ -22,7 +22,18 @@ import {
   BarChart3,
   Star,
   Scale,
+  RefreshCw,
+  Check,
+  DollarSign,
+  type LucideIcon,
 } from "lucide-react";
+
+const NOTIF_ICONS: Record<string, LucideIcon> = {
+  check: Check,
+  x: X,
+  MessageSquare,
+  DollarSign,
+};
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useI18n } from "@/hooks/useI18n";
 import { UserAvatar } from "@/components/user/UserAvatar";
@@ -170,7 +181,7 @@ export function Navbar() {
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 flex items-center justify-between h-14 gap-3">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-1.5 shrink-0">
-          <span className="text-lg">🔄</span>
+          <RefreshCw className="h-5 w-5" />
           <span className="font-heading font-extrabold text-lg text-foreground">TradeHub</span>
         </Link>
 
@@ -312,7 +323,7 @@ export function Navbar() {
                             !n.read ? "bg-brand/5" : ""
                           }`}
                         >
-                          <span className="text-base mt-0.5 shrink-0">{n.icon}</span>
+                          <span className="mt-0.5 shrink-0">{(() => { const Icon = NOTIF_ICONS[n.icon]; return Icon ? <Icon className="h-4 w-4 text-muted" /> : null; })()}</span>
                           <div className="flex-1 min-w-0">
                             <p className={`text-xs leading-relaxed ${!n.read ? "text-foreground font-medium" : "text-muted"}`}>
                               {n.title}

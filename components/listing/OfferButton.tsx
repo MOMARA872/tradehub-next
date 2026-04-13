@@ -68,7 +68,7 @@ export function OfferButton({ listing }: { listing: ListingSnippet }) {
       supabase,
       userId: listing.user_id,
       type: "offer_received",
-      icon: "💰",
+      icon: "DollarSign",
       title: `New offer: $${parseFloat(offerAmount).toFixed(2)}`,
       body: `Someone made an offer on "${listing.title}"`,
       link: "/offers",

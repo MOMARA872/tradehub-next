@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRegionStore } from "@/store/regionStore";
 import { useI18n } from "@/hooks/useI18n";
+import { MapPin } from "lucide-react";
 
 const footerSections = [
   {
@@ -81,7 +82,7 @@ export function Footer() {
           <div>
             <h4 className="font-heading font-semibold text-foreground text-sm mb-3">Contact</h4>
             <p className="text-xs text-muted mb-1">Email: hello@tradehub.local</p>
-            <p className="text-xs text-muted">📍 {selectedRegion.name}</p>
+            <p className="flex items-center gap-1 text-xs text-muted"><MapPin className="h-3 w-3" /> {selectedRegion.name}</p>
           </div>
         </div>
 

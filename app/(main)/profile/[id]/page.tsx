@@ -100,7 +100,7 @@ export default function ProfilePage() {
   if (!user) {
     return (
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-16">
-        <EmptyState message="User not found" icon="🔍" />
+        <EmptyState message="User not found" icon="Search" />
       </div>
     );
   }
@@ -281,7 +281,7 @@ export default function ProfilePage() {
         {activeTab === "listings" && (
           <>
             {userListings.length === 0 ? (
-              <EmptyState message="No listings yet" icon="📦" />
+              <EmptyState message="No listings yet" icon="Package" />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {userListings.map((listing) => (
@@ -295,7 +295,7 @@ export default function ProfilePage() {
         {activeTab === "reviews" && (
           <>
             {userReviews.length === 0 ? (
-              <EmptyState message="No reviews yet" icon="⭐" />
+              <EmptyState message="No reviews yet" icon="Star" />
             ) : (
               <div className="space-y-4">
                 {userReviews.map((review) => {

@@ -5,6 +5,7 @@ import { ConditionBadge } from './ConditionBadge';
 import { PriceBadge } from './PriceBadge';
 import { truncate } from '@/lib/helpers/format';
 import type { Listing, User } from '@/lib/types';
+import { MapPin } from 'lucide-react';
 
 function ListingCard({ listing }: { listing: Listing }) {
   const user = null as (User | null); // TODO: fetch from Supabase
@@ -30,7 +31,7 @@ function ListingCard({ listing }: { listing: Listing }) {
           <p className="text-xs text-muted mb-3">{listing.subcategory}</p>
           <div className="flex items-center justify-between">
             <PriceBadge price={listing.price} priceType={listing.priceType} />
-            <span className="text-xs text-subtle">📍 {listing.city}</span>
+            <span className="flex items-center gap-0.5 text-xs text-subtle"><MapPin className="h-3 w-3" /> {listing.city}</span>
           </div>
           {user && (
             <p className="text-xs text-subtle mt-2">By {user.displayName}</p>

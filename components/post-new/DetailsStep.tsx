@@ -75,7 +75,7 @@ export function DetailsStep({
           {(Object.entries(CONDITIONS) as [ConditionKey, typeof CONDITIONS[ConditionKey]][]).map(
             ([key, val]) => (
               <option key={key} value={key}>
-                {val.emoji} {val.label} — {val.description}
+                {val.label} — {val.description}
               </option>
             )
           )}

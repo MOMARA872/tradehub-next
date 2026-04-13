@@ -1,6 +1,7 @@
 "use client";
 
 import type { Category } from "@/lib/types";
+import { CategoryIcon } from "@/lib/helpers/categoryIcon";
 
 interface CategoryStepProps {
   categories: Category[];
@@ -40,7 +41,7 @@ export function CategoryStep({
                 : "border-border bg-card hover:border-muted"
             }`}
           >
-            <span className="text-2xl">{cat.icon}</span>
+            <CategoryIcon name={cat.icon} className="h-6 w-6" />
             <span className="text-sm font-medium text-foreground">
               {cat.name}
             </span>
