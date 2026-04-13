@@ -36,7 +36,8 @@ export function Navbar() {
   const supabase = createClient();
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
-  const { selectedRegion, setRegion } = useRegionStore();
+  const { selectedRegion, setRegion, setZipRegion } = useRegionStore();
+  const [regionZipInput, setRegionZipInput] = useState("");
   const { t } = useI18n();
 
   const publicPages = [
@@ -184,7 +185,26 @@ export function Navbar() {
             <ChevronDown className={`h-3 w-3 transition-transform ${regionOpen ? "rotate-180" : ""}`} />
           </button>
           {regionOpen && (
-            <div className="absolute top-full left-0 mt-2 bg-card border border-border rounded-lg shadow-lg py-1.5 min-w-[180px] z-50 animate-fade-in">
+            <div className="absolute top-full left-0 mt-2 bg-card border border-border rounded-lg shadow-lg py-1.5 min-w-[200px] z-50 animate-fade-in">
+              <div className="px-3 py-2 border-b border-border">
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  if (regionZipInput.trim()) {
+                    setZipRegion(regionZipInput.trim());
+                    setRegionZipInput("");
+                    setRegionOpen(false);
+                  }
+                }}>
+                  <input
+                    type="text"
+                    value={regionZipInput}
+                    onChange={(e) => setRegionZipInput(e.target.value.replace(/[^0-9-]/g, "").slice(0, 10))}
+                    placeholder="Enter zip code..."
+                    className="w-full bg-surface2 border border-border rounded px-2.5 py-1.5 text-xs text-foreground placeholder:text-subtle focus:outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </form>
+              </div>
+              <p className="px-3 pt-2 pb-1 text-[10px] text-subtle uppercase tracking-wide">Regions</p>
               {REGIONS.map((r) => (
                 <button
                   key={r.id}
