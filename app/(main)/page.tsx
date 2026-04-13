@@ -222,7 +222,7 @@ export default async function HomePage() {
               <div className="flex items-center justify-center gap-3">
                 <Link
                   href="/register"
-                  className="bg-white/90 text-brand font-semibold text-sm px-6 py-3 rounded-lg shadow-lg shadow-black/10 hover:bg-white hover:shadow-xl hover:scale-[1.02] transition-all"
+                  className="bg-white/70 text-white font-semibold text-sm px-6 py-3 rounded-lg shadow-lg shadow-black/10 backdrop-blur-sm hover:bg-white/85 hover:text-brand hover:shadow-xl hover:scale-[1.02] transition-all"
                 >
                   Sign Up Free
                 </Link>
