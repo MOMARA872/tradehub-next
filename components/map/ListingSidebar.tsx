@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Listing } from "@/lib/types";
 import { PriceBadge } from "@/components/listing/PriceBadge";
-import { ConditionBadge } from "@/components/listing/ConditionBadge";
+import { CONDITIONS } from "@/lib/data/conditions";
 import { truncate } from "@/lib/helpers/format";
 import { MapPin } from "lucide-react";
 
@@ -63,14 +63,14 @@ export function ListingSidebar({
             }`}
           >
             {/* Thumbnail */}
-            <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-surface3 flex-shrink-0">
+            <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-surface3 flex-shrink-0">
               {photo ? (
                 <Image
                   src={photo}
                   alt={listing.title}
                   fill
                   className="object-cover"
-                  sizes="80px"
+                  sizes="56px"
                 />
               ) : (
                 <div className="flex items-center justify-center h-full">
@@ -79,15 +79,19 @@ export function ListingSidebar({
                   </span>
                 </div>
               )}
-              <div className="absolute top-1 left-1">
-                <ConditionBadge condition={listing.condition} />
-              </div>
+              {CONDITIONS[listing.condition] && (
+                <span
+                  className="absolute top-1 left-1 w-2.5 h-2.5 rounded-full border border-white/60"
+                  style={{ backgroundColor: CONDITIONS[listing.condition].color }}
+                  title={CONDITIONS[listing.condition].label}
+                />
+              )}
             </div>
 
             {/* Info */}
             <div className="flex-1 min-w-0 py-0.5">
               <h3 className="font-semibold text-foreground text-xs leading-tight mb-1 truncate">
-                {truncate(listing.title, 36)}
+                {truncate(listing.title, 28)}
               </h3>
               <p className="text-[10px] text-muted mb-1.5 truncate">{listing.subcategory}</p>
               <div className="flex items-center justify-between gap-2">
