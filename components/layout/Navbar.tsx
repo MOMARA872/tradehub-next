@@ -61,8 +61,8 @@ export function Navbar() {
   const userPages = [
     { id: "/dashboard", label: t("nav.dashboard"), href: "/dashboard", icon: LayoutDashboard },
     { id: "/messages", label: t("nav.messages"), href: "/messages", icon: MessageSquare },
-    { id: "/analytics", label: "Analytics", href: "/analytics", icon: BarChart3 },
-    { id: "/reviews", label: "Blind Reviews", href: "/reviews", icon: Star },
+    { id: "/analytics", label: "Analytics", href: "/analytics", icon: BarChart3, proOnly: true },
+    { id: "/reviews", label: "Reviews", href: "/reviews", icon: Star },
     { id: "/disputes", label: "Disputes", href: "/disputes", icon: Scale },
   ];
   const [searchQuery, setSearchQuery] = useState("");
@@ -375,11 +375,14 @@ export function Navbar() {
                   {userPages.map((p) => (
                     <Link
                       key={p.id}
-                      href={p.href}
+                      href={(p as any).proOnly && profile?.tier !== "pro" ? "/settings" : p.href}
                       onClick={() => setUserMenuOpen(false)}
                       className={`flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-surface2 transition-colors ${pathname === p.id ? "text-brand font-medium" : "text-foreground"}`}
                     >
                       <p.icon className="h-4 w-4" /> {p.label}
+                      {(p as any).proOnly && profile?.tier !== "pro" && (
+                        <span className="text-[9px] font-semibold bg-brand/10 text-brand px-1.5 py-0.5 rounded-full ml-auto">PRO</span>
+                      )}
                     </Link>
                   ))}
                   <div className="border-t border-border my-0.5" />
@@ -438,11 +441,14 @@ export function Navbar() {
                 {!!user && userPages.map((p) => (
                   <Link
                     key={p.id}
-                    href={p.href}
+                    href={(p as any).proOnly && profile?.tier !== "pro" ? "/settings" : p.href}
                     onClick={() => setMobileOpen(false)}
                     className="flex items-center gap-2 px-3 py-2 text-sm text-foreground"
                   >
                     <p.icon className="h-4 w-4" /> {p.label}
+                    {(p as any).proOnly && profile?.tier !== "pro" && (
+                      <span className="text-[9px] font-semibold bg-brand/10 text-brand px-1.5 py-0.5 rounded-full ml-auto">PRO</span>
+                    )}
                   </Link>
                 ))}
                 <div className="border-t border-border my-2" />

@@ -15,6 +15,7 @@ import {
   Monitor,
 } from "lucide-react";
 import Link from "next/link";
+import { Lock, Crown } from "lucide-react";
 
 export default function AnalyticsPage() {
   const { currentUser, isLoggedIn } = useAuth();
@@ -23,7 +24,7 @@ export default function AnalyticsPage() {
   if (!isLoggedIn || !currentUser) {
     return (
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 text-center animate-fade-in">
-        <div className="text-5xl mb-4">&#x1f512;</div>
+        <div className="flex justify-center mb-4"><Lock className="h-12 w-12 text-muted" /></div>
         <h1 className="font-heading font-bold text-2xl text-foreground mb-2">
           Sign in to view analytics
         </h1>
@@ -35,6 +36,29 @@ export default function AnalyticsPage() {
           className="inline-block bg-brand text-white font-semibold text-sm px-6 py-2.5 rounded-lg hover:opacity-90 transition-opacity"
         >
           Go to Login
+        </Link>
+      </div>
+    );
+  }
+
+  const isPro = currentUser.tier === "pro" &&
+    (currentUser.subscriptionStatus === "active" || currentUser.subscriptionStatus === "trialing");
+
+  if (!isPro) {
+    return (
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 text-center animate-fade-in">
+        <div className="flex justify-center mb-4"><Crown className="h-12 w-12 text-brand" /></div>
+        <h1 className="font-heading font-bold text-2xl text-foreground mb-2">
+          Analytics is a Pro feature
+        </h1>
+        <p className="text-muted text-sm mb-6 max-w-md mx-auto">
+          Upgrade to TradeHub Pro to access listing analytics, track views, and monitor performance.
+        </p>
+        <Link
+          href="/settings"
+          className="inline-block bg-brand text-white font-semibold text-sm px-6 py-2.5 rounded-lg hover:opacity-90 transition-opacity"
+        >
+          Upgrade to Pro
         </Link>
       </div>
     );
