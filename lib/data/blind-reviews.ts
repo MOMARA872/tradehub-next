@@ -56,4 +56,31 @@ export const BLIND_REVIEWS: BlindReview[] = [
     sellerReview: { rating: 4, comment: 'Good buyer, no issues with pickup.', quickTags: ['Easy Pickup', 'Friendly'], conditionMatch: 'yes', submittedAt: '2024-03-24T18:00:00Z' },
     status: 'revealed', revealedAt: '2024-03-24T18:00:00Z'
   },
+  {
+    id: 'blindrev006', transactionId: 'txn006', listingId: 'e1b4c75f-0071-45a8-a6d8-56620b8b5921', buyerId: 'user001', sellerId: 'a8edc1be-8a7d-4116-88fd-571d7aae6e92',
+    buyerReview: { rating: 5, comment: 'Mara was super responsive and the item was exactly as described. Smooth trade!', quickTags: ['As Described', 'Fast Shipping', 'Great Communication'], conditionMatch: 'yes', submittedAt: '2024-04-08T10:00:00Z' },
+    sellerReview: { rating: 5, comment: 'Great buyer! Quick payment and easy to coordinate with.', quickTags: ['Quick Responder', 'Reliable', 'Friendly'], conditionMatch: 'yes', submittedAt: '2024-04-08T14:00:00Z' },
+    status: 'revealed', revealedAt: '2024-04-08T14:00:00Z',
+    listingTitle: 'skyz', buyerName: 'Sarah Johnson', buyerInitials: 'SJ', sellerName: 'Mara Mos', sellerInitials: 'MA',
+  },
+  {
+    id: 'blindrev007', transactionId: 'txn007', listingId: 'bdabd210-6ae5-4994-8aa8-146c18aa9a60', buyerId: 'user003', sellerId: 'a8edc1be-8a7d-4116-88fd-571d7aae6e92',
+    buyerReview: { rating: 4, comment: 'Good item, fair price. Took a bit longer to arrange but overall positive.', quickTags: ['Fair Prices', 'Good Condition'], conditionMatch: 'yes', submittedAt: '2024-04-06T11:00:00Z' },
+    sellerReview: { rating: 4, comment: 'Nice buyer, patient with scheduling.', quickTags: ['Patient', 'Easy to Work With'], conditionMatch: 'yes', submittedAt: '2024-04-06T15:00:00Z' },
+    status: 'revealed', revealedAt: '2024-04-06T15:00:00Z',
+    listingTitle: 'kokok', buyerName: 'Emma Wilson', buyerInitials: 'EW', sellerName: 'Mara Mos', sellerInitials: 'MA',
+  },
+  {
+    id: 'blindrev008', transactionId: 'txn008', listingId: '62e2d351-6980-405d-ab58-1892b3cbbd88', buyerId: 'user005', sellerId: 'a8edc1be-8a7d-4116-88fd-571d7aae6e92',
+    buyerReview: { rating: 5, comment: 'Amazing trade deal! Mara was honest about condition and very flexible.', quickTags: ['Honest', 'Flexible', 'Great Trade'], conditionMatch: 'yes', submittedAt: '2024-04-04T09:00:00Z' },
+    sellerReview: null,
+    status: 'awaiting_seller', revealedAt: null,
+    listingTitle: '23e4', buyerName: 'Lisa Zhang', buyerInitials: 'LZ', sellerName: 'Mara Mos', sellerInitials: 'MA',
+  },
+  {
+    id: 'blindrev009', transactionId: 'txn009', listingId: 'a45499b9-ae1f-4f86-9a1a-2074a86b4aa6', buyerId: 'user008', sellerId: 'a8edc1be-8a7d-4116-88fd-571d7aae6e92',
+    buyerReview: null, sellerReview: null,
+    status: 'awaiting_both', revealedAt: null,
+    listingTitle: 'ijojiji', buyerName: 'Thomas Kelly', buyerInitials: 'TK', sellerName: 'Mara Mos', sellerInitials: 'MA',
+  },
 ];
