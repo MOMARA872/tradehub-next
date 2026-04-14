@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { Listing } from "@/lib/types";
-import { PriceBadge } from "@/components/listing/PriceBadge";
 import { CONDITIONS } from "@/lib/data/conditions";
 import { truncate } from "@/lib/helpers/format";
 import { MapPin } from "lucide-react";
@@ -89,7 +88,9 @@ export function ListingSidebar({
               <p className="text-[10px] text-muted mb-1.5 truncate">{listing.subcategory}</p>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5">
-                  <PriceBadge price={listing.price} priceType={listing.priceType} />
+                  <span className="text-xs font-bold text-foreground">
+                    {listing.priceType === "free" ? "FREE" : listing.priceType === "trade" ? "TRADE" : `$${listing.price}`}
+                  </span>
                   {CONDITIONS[listing.condition] && (
                     <span
                       className="w-2.5 h-2.5 rounded-full flex-shrink-0"
