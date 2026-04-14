@@ -81,7 +81,7 @@ export function ListingSidebar({
               )}
               {CONDITIONS[listing.condition] && (
                 <span
-                  className="absolute top-1 left-1 w-2.5 h-2.5 rounded-full border border-white/60"
+                  className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full border border-white/60"
                   style={{ backgroundColor: CONDITIONS[listing.condition].color }}
                   title={CONDITIONS[listing.condition].label}
                 />
