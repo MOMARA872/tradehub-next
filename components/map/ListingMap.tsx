@@ -13,17 +13,16 @@ export interface MapBounds {
   west: number;
 }
 
-// Default Leaflet marker icon
-const defaultIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+function redCircleIcon(count: number) {
+  const size = Math.max(32, Math.min(48, 32 + count * 2));
+  return L.divIcon({
+    className: "",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
+    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:rgba(239,68,68,0.7);border:2px solid rgba(239,68,68,1);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;font-family:system-ui,sans-serif;">${count}</div>`,
+  });
+}
 
 function getRegionForListing(listing: Listing): Region | undefined {
   // Match by city field (handles both region IDs like "prescott-az"
@@ -150,7 +149,7 @@ export function ListingMap({
       const count = regionItems.length;
 
       const marker = L.marker([region.lat, region.lng], {
-        icon: defaultIcon,
+        icon: redCircleIcon(count),
       });
 
       const popupContent = `
