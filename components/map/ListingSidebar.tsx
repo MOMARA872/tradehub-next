@@ -92,7 +92,7 @@ export function ListingSidebar({
                   <PriceBadge price={listing.price} priceType={listing.priceType} />
                   {CONDITIONS[listing.condition] && (
                     <span
-                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                       style={{ backgroundColor: CONDITIONS[listing.condition].color }}
                       title={CONDITIONS[listing.condition].label}
                     />
