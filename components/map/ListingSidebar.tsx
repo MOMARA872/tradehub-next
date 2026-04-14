@@ -79,13 +79,6 @@ export function ListingSidebar({
                   </span>
                 </div>
               )}
-              {CONDITIONS[listing.condition] && (
-                <span
-                  className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full border border-white/60"
-                  style={{ backgroundColor: CONDITIONS[listing.condition].color }}
-                  title={CONDITIONS[listing.condition].label}
-                />
-              )}
             </div>
 
             {/* Info */}
@@ -95,7 +88,16 @@ export function ListingSidebar({
               </h3>
               <p className="text-[10px] text-muted mb-1.5 truncate">{listing.subcategory}</p>
               <div className="flex items-center justify-between gap-2">
-                <PriceBadge price={listing.price} priceType={listing.priceType} />
+                <div className="flex items-center gap-1.5">
+                  <PriceBadge price={listing.price} priceType={listing.priceType} />
+                  {CONDITIONS[listing.condition] && (
+                    <span
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: CONDITIONS[listing.condition].color }}
+                      title={CONDITIONS[listing.condition].label}
+                    />
+                  )}
+                </div>
                 <span className="flex items-center gap-0.5 text-[10px] text-subtle truncate">
                   <MapPin className="h-2.5 w-2.5 flex-shrink-0" />
                   {listing.city}
