@@ -199,9 +199,9 @@ export default function MapViewPage() {
         ))}
       </div>
 
-      {/* Split view: map on the left, sidebar on the right.
+      {/* Split view: map on the left, compact sidebar on the right.
           Mobile: stacked. */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-4 h-[calc(100vh-220px)] min-h-[600px]">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4 h-[calc(100vh-220px)] min-h-[600px]">
         {/* Map column */}
         <div className="relative h-[400px] lg:h-full">
           <ListingMap

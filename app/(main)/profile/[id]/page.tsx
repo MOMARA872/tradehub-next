@@ -25,6 +25,11 @@ import {
   Camera,
   X,
   Loader2,
+  ChevronUp,
+  ChevronDown,
+  MessageCircle,
+  Send,
+  Plus,
 } from "lucide-react";
 import { REGIONS } from "@/lib/data/regions";
 import {
@@ -43,11 +48,12 @@ export default function ProfilePage() {
   const userId = params.id as string;
   const { currentUser } = useAuth();
   const supabase = createClient();
-  const [activeTab, setActiveTab] = useState<"listings" | "reviews">("listings");
+  const [activeTab, setActiveTab] = useState<"listings" | "reviews" | "community">("listings");
   const [user, setUser] = useState<User | null>(null);
   const [userListings, setUserListings] = useState<Listing[]>([]);
   const [profileLoading, setProfileLoading] = useState(true);
   const [liveStats, setLiveStats] = useState({ offerCount: 0, threadCount: 0 });
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -58,6 +64,7 @@ export default function ProfilePage() {
         { data: listings },
         { count: offerCount },
         { count: threadCount },
+        { data: posts },
       ] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", userId).single(),
         supabase
@@ -74,6 +81,11 @@ export default function ProfilePage() {
           .from("threads")
           .select("*", { count: "exact", head: true })
           .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`),
+        supabase
+          .from("community_posts")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false }),
       ]);
 
       if (!mounted) return;
@@ -81,6 +93,7 @@ export default function ProfilePage() {
       setUser(profile ? dbProfileToUser(profile) : null);
       setUserListings((listings ?? []).map(dbListingToListing));
       setLiveStats({ offerCount: offerCount ?? 0, threadCount: threadCount ?? 0 });
+      setCommunityPosts((posts ?? []) as CommunityPost[]);
       setProfileLoading(false);
     }
 
@@ -276,6 +289,19 @@ export default function ProfilePage() {
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />
           )}
         </button>
+        <button
+          onClick={() => setActiveTab("community")}
+          className={`pb-3 text-sm font-medium transition-colors relative ${
+            activeTab === "community"
+              ? "text-brand"
+              : "text-muted hover:text-foreground"
+          }`}
+        >
+          Community ({communityPosts.length})
+          {activeTab === "community" && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />
+          )}
+        </button>
       </div>
 
       {/* Tab Content */}
@@ -356,7 +382,307 @@ export default function ProfilePage() {
             )}
           </>
         )}
+
+        {activeTab === "community" && (
+          <CommunityTab
+            userId={userId}
+            isOwnProfile={isOwnProfile}
+            posts={communityPosts}
+            onPostsChange={setCommunityPosts}
+          />
+        )}
       </div>
+    </div>
+  );
+}
+
+interface CommunityPost {
+  id: string;
+  user_id: string;
+  title: string;
+  body: string;
+  upvotes: number;
+  downvotes: number;
+  comment_count: number;
+  created_at: string;
+}
+
+interface CommunityComment {
+  id: string;
+  post_id: string;
+  user_id: string;
+  body: string;
+  created_at: string;
+  profiles?: { display_name: string; avatar_initials: string };
+}
+
+function CommunityTab({
+  userId,
+  isOwnProfile,
+  posts,
+  onPostsChange,
+}: {
+  userId: string;
+  isOwnProfile: boolean;
+  posts: CommunityPost[];
+  onPostsChange: (posts: CommunityPost[]) => void;
+}) {
+  const supabase = createClient();
+  const [showForm, setShowForm] = useState(false);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [expandedPost, setExpandedPost] = useState<string | null>(null);
+  const [comments, setComments] = useState<Record<string, CommunityComment[]>>({});
+  const [commentText, setCommentText] = useState<Record<string, string>>({});
+  const [loadingComments, setLoadingComments] = useState<Record<string, boolean>>({});
+
+  async function handlePost() {
+    if (!title.trim()) return;
+    setPosting(true);
+    const { data, error } = await supabase
+      .from("community_posts")
+      .insert({ user_id: userId, title: title.trim(), body: body.trim() })
+      .select()
+      .single();
+    setPosting(false);
+    if (error) { alert(error.message); return; }
+    onPostsChange([data as CommunityPost, ...posts]);
+    setTitle("");
+    setBody("");
+    setShowForm(false);
+  }
+
+  async function handleVote(postId: string, direction: "up" | "down") {
+    const field = direction === "up" ? "upvotes" : "downvotes";
+    const post = posts.find((p) => p.id === postId);
+    if (!post) return;
+    await supabase
+      .from("community_posts")
+      .update({ [field]: post[field] + 1 })
+      .eq("id", postId);
+    onPostsChange(
+      posts.map((p) => (p.id === postId ? { ...p, [field]: p[field] + 1 } : p))
+    );
+  }
+
+  async function toggleComments(postId: string) {
+    if (expandedPost === postId) {
+      setExpandedPost(null);
+      return;
+    }
+    setExpandedPost(postId);
+    if (!comments[postId]) {
+      setLoadingComments((prev) => ({ ...prev, [postId]: true }));
+      const { data } = await supabase
+        .from("community_comments")
+        .select("*, profiles(display_name, avatar_initials)")
+        .eq("post_id", postId)
+        .order("created_at", { ascending: true });
+      setComments((prev) => ({ ...prev, [postId]: (data ?? []) as CommunityComment[] }));
+      setLoadingComments((prev) => ({ ...prev, [postId]: false }));
+    }
+  }
+
+  async function handleComment(postId: string) {
+    const text = commentText[postId]?.trim();
+    if (!text) return;
+    const { data, error } = await supabase
+      .from("community_comments")
+      .insert({ post_id: postId, user_id: userId, body: text })
+      .select("*, profiles(display_name, avatar_initials)")
+      .single();
+    if (error) { alert(error.message); return; }
+    setComments((prev) => ({
+      ...prev,
+      [postId]: [...(prev[postId] ?? []), data as CommunityComment],
+    }));
+    setCommentText((prev) => ({ ...prev, [postId]: "" }));
+    // Update comment count locally
+    await supabase
+      .from("community_posts")
+      .update({ comment_count: (posts.find((p) => p.id === postId)?.comment_count ?? 0) + 1 })
+      .eq("id", postId);
+    onPostsChange(
+      posts.map((p) =>
+        p.id === postId ? { ...p, comment_count: p.comment_count + 1 } : p
+      )
+    );
+  }
+
+  function timeAgoShort(dateStr: string) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d`;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* New Post Form */}
+      {isOwnProfile && (
+        <div>
+          {!showForm ? (
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 px-4 py-2.5 w-full bg-surface2 border border-border rounded-lg text-sm text-muted hover:text-foreground hover:bg-surface3 transition-colors text-left"
+            >
+              <Plus className="h-4 w-4" />
+              Create a post...
+            </button>
+          ) : (
+            <div className="bg-card border border-border rounded-[var(--radius-md)] p-4 space-y-3">
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Post title"
+                className="w-full bg-surface2 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-subtle focus:outline-none focus:ring-1 focus:ring-brand"
+              />
+              <textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="What's on your mind? (optional)"
+                rows={3}
+                className="w-full bg-surface2 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-subtle focus:outline-none focus:ring-1 focus:ring-brand resize-none"
+              />
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => { setShowForm(false); setTitle(""); setBody(""); }}
+                  className="px-3 py-1.5 text-xs text-muted hover:text-foreground transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePost}
+                  disabled={posting || !title.trim()}
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-brand text-white text-xs font-semibold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {posting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                  Post
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Posts List */}
+      {posts.length === 0 ? (
+        <EmptyState message="No community posts yet" icon="MessageCircle" />
+      ) : (
+        posts.map((post) => (
+          <div
+            key={post.id}
+            className="bg-card border border-border rounded-[var(--radius-md)] overflow-hidden"
+          >
+            <div className="flex">
+              {/* Vote Column */}
+              <div className="flex flex-col items-center gap-0.5 px-3 py-4 bg-surface2/50">
+                <button
+                  onClick={() => handleVote(post.id, "up")}
+                  className="p-1 rounded hover:bg-success/10 text-muted hover:text-success transition-colors"
+                >
+                  <ChevronUp className="h-5 w-5" />
+                </button>
+                <span className="text-xs font-semibold text-foreground min-w-[20px] text-center">
+                  {post.upvotes - post.downvotes}
+                </span>
+                <button
+                  onClick={() => handleVote(post.id, "down")}
+                  className="p-1 rounded hover:bg-danger/10 text-muted hover:text-danger transition-colors"
+                >
+                  <ChevronDown className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 p-4">
+                <h3 className="text-sm font-semibold text-foreground">{post.title}</h3>
+                {post.body && (
+                  <p className="text-sm text-muted mt-1 leading-relaxed">{post.body}</p>
+                )}
+                <div className="flex items-center gap-3 mt-3">
+                  <button
+                    onClick={() => toggleComments(post.id)}
+                    className="flex items-center gap-1.5 text-xs text-muted hover:text-foreground transition-colors"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    {post.comment_count} {post.comment_count === 1 ? "comment" : "comments"}
+                  </button>
+                  <span className="text-[10px] text-subtle">
+                    {timeAgoShort(post.created_at)} ago
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Expanded Comments */}
+            {expandedPost === post.id && (
+              <div className="border-t border-border bg-surface2/30 px-4 py-3 space-y-3">
+                {loadingComments[post.id] ? (
+                  <div className="flex justify-center py-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted" />
+                  </div>
+                ) : (
+                  <>
+                    {(comments[post.id] ?? []).map((c) => (
+                      <div key={c.id} className="flex gap-2">
+                        <div className="w-6 h-6 rounded-full bg-brand/20 text-brand flex items-center justify-center text-[9px] font-semibold flex-shrink-0 mt-0.5">
+                          {c.profiles?.avatar_initials ?? "??"}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-foreground">
+                              {c.profiles?.display_name ?? "Unknown"}
+                            </span>
+                            <span className="text-[10px] text-subtle">
+                              {timeAgoShort(c.created_at)} ago
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted mt-0.5">{c.body}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {(comments[post.id] ?? []).length === 0 && (
+                      <p className="text-xs text-subtle text-center py-1">No comments yet</p>
+                    )}
+                  </>
+                )}
+
+                {/* Add Comment */}
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={commentText[post.id] ?? ""}
+                    onChange={(e) =>
+                      setCommentText((prev) => ({ ...prev, [post.id]: e.target.value }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleComment(post.id);
+                      }
+                    }}
+                    placeholder="Add a comment..."
+                    className="flex-1 bg-surface2 border border-border rounded-lg px-3 py-1.5 text-xs text-foreground placeholder:text-subtle focus:outline-none focus:ring-1 focus:ring-brand"
+                  />
+                  <button
+                    onClick={() => handleComment(post.id)}
+                    disabled={!commentText[post.id]?.trim()}
+                    className="px-3 py-1.5 bg-brand text-white text-xs font-semibold rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
+                  >
+                    Reply
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))
+      )}
     </div>
   );
 }
@@ -379,9 +705,12 @@ function EditProfileButton({ user }: { user: User }) {
     ? Math.ceil((cooldownEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : 0;
 
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setPendingFile(file);
     setProfileImage(URL.createObjectURL(file));
     e.target.value = "";
   }
@@ -393,10 +722,28 @@ function EditProfileButton({ user }: { user: User }) {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
 
+      // Upload new profile photo to Supabase storage if one was selected
+      let resolvedImage: string | null = profileImage || null;
+      if (pendingFile) {
+        const ext = pendingFile.name.split(".").pop() || "jpg";
+        const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage
+          .from("listing-photos")
+          .upload(path, pendingFile);
+        if (uploadErr) throw new Error(`Photo upload failed: ${uploadErr.message}`);
+        const { data: { publicUrl } } = supabase.storage
+          .from("listing-photos")
+          .getPublicUrl(path);
+        resolvedImage = publicUrl;
+      } else if (profileImage && profileImage.startsWith("blob:")) {
+        // Stale blob URL — clear it
+        resolvedImage = null;
+      }
+
       const updates: Record<string, unknown> = {
         bio: bio.trim(),
         city,
-        profile_image: profileImage || null,
+        profile_image: resolvedImage,
       };
 
       // Only include display_name if the user actually changed it and cooldown allows it.
@@ -453,7 +800,7 @@ function EditProfileButton({ user }: { user: User }) {
                 Profile Photo
               </label>
               <div className="flex items-center gap-4">
-                {profileImage ? (
+                {profileImage && (profileImage.startsWith("blob:") || profileImage.includes(new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname)) ? (
                   <div className="relative">
                     <Image
                       src={profileImage}
@@ -461,6 +808,7 @@ function EditProfileButton({ user }: { user: User }) {
                       width={64}
                       height={64}
                       className="h-16 w-16 rounded-full object-cover"
+                      unoptimized={profileImage.startsWith("blob:")}
                     />
                     <button
                       type="button"

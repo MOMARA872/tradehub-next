@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import type { Listing } from "@/lib/types";
-import { ListingCard } from "@/components/listing/ListingCard";
+import { PriceBadge } from "@/components/listing/PriceBadge";
+import { ConditionBadge } from "@/components/listing/ConditionBadge";
+import { truncate } from "@/lib/helpers/format";
+import { MapPin } from "lucide-react";
 
 interface ListingSidebarProps {
   listings: Listing[];
@@ -10,11 +15,6 @@ interface ListingSidebarProps {
   onCardHover: (id: string | null) => void;
 }
 
-// Sidebar of ListingCards synced with the map.
-//
-// ListingCard is memoized and takes only `listing`, so we wrap each card in a
-// div here that handles hover and highlight styling — we don't touch the card
-// component itself.
 export function ListingSidebar({
   listings,
   hoveredId,
@@ -22,7 +22,6 @@ export function ListingSidebar({
 }: ListingSidebarProps) {
   const refs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // When the user hovers a pin on the map, scroll the matching card into view.
   useEffect(() => {
     if (!hoveredId) return;
     const el = refs.current.get(hoveredId);
@@ -40,26 +39,66 @@ export function ListingSidebar({
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-2 p-3">
+      <p className="text-[10px] font-medium text-subtle uppercase tracking-wider px-1">
+        {listings.length} listing{listings.length !== 1 ? "s" : ""} nearby
+      </p>
       {listings.map((listing) => {
         const highlighted = listing.id === hoveredId;
+        const photo = listing.photos[0] || null;
         return (
-          <div
+          <Link
             key={listing.id}
+            href={`/listing/${listing.id}`}
             ref={(el) => {
-              if (el) refs.current.set(listing.id, el);
+              if (el) refs.current.set(listing.id, el as unknown as HTMLDivElement);
               else refs.current.delete(listing.id);
             }}
             onMouseEnter={() => onCardHover(listing.id)}
             onMouseLeave={() => onCardHover(null)}
-            className={`rounded-[var(--radius-md)] transition-shadow ${
+            className={`flex gap-3 p-2 rounded-[var(--radius-md)] transition-all hover:bg-surface3 ${
               highlighted
-                ? "ring-2 ring-brand shadow-lg"
+                ? "ring-2 ring-brand bg-surface3"
                 : "ring-0"
             }`}
           >
-            <ListingCard listing={listing} />
-          </div>
+            {/* Thumbnail */}
+            <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-surface3 flex-shrink-0">
+              {photo ? (
+                <Image
+                  src={photo}
+                  alt={listing.title}
+                  fill
+                  className="object-cover"
+                  sizes="80px"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <span className="text-subtle text-[9px] text-center leading-tight px-1">
+                    {truncate(listing.title, 20)}
+                  </span>
+                </div>
+              )}
+              <div className="absolute top-1 left-1">
+                <ConditionBadge condition={listing.condition} />
+              </div>
+            </div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0 py-0.5">
+              <h3 className="font-semibold text-foreground text-xs leading-tight mb-1 truncate">
+                {truncate(listing.title, 36)}
+              </h3>
+              <p className="text-[10px] text-muted mb-1.5 truncate">{listing.subcategory}</p>
+              <div className="flex items-center justify-between gap-2">
+                <PriceBadge price={listing.price} priceType={listing.priceType} />
+                <span className="flex items-center gap-0.5 text-[10px] text-subtle truncate">
+                  <MapPin className="h-2.5 w-2.5 flex-shrink-0" />
+                  {listing.city}
+                </span>
+              </div>
+            </div>
+          </Link>
         );
       })}
     </div>
