@@ -7,7 +7,7 @@ import { UserAvatar } from "@/components/user/UserAvatar";
 import { EmptyState } from "@/components/common/EmptyState";
 import { NewPostModal } from "@/components/community/NewPostModal";
 import { timeAgo } from "@/lib/helpers/format";
-import { MessageSquare, Heart, Pin, Filter, Plus } from "lucide-react";
+import { MessageSquare, Heart, Pin, Filter, Plus, Send, Loader2 } from "lucide-react";
 
 type Category = "all" | "announcement" | "discussion" | "tip" | "question";
 
@@ -107,6 +107,8 @@ export default function CommunityPage() {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<Category>("all");
   const [modalOpen, setModalOpen] = useState(false);
+  const [commentText, setCommentText] = useState<Record<string, string>>({});
+  const [commentLoading, setCommentLoading] = useState<string | null>(null);
 
   const fetchPosts = useCallback(async () => {
     setLoading(true);
@@ -155,6 +157,27 @@ export default function CommunityPage() {
   useEffect(() => {
     fetchPosts();
   }, [fetchPosts]);
+
+  async function handleComment(postId: string) {
+    const text = (commentText[postId] || "").trim();
+    if (!text || !currentUser) return;
+
+    setCommentLoading(postId);
+    const { error } = await supabase
+      .from("community_comments")
+      .insert({ post_id: postId, user_id: currentUser.id, body: text });
+
+    if (!error) {
+      await supabase
+        .from("community_posts")
+        .update({ comment_count: (posts.find((p) => p.id === postId)?.comment_count ?? 0) + 1 })
+        .eq("id", postId);
+
+      setCommentText((prev) => ({ ...prev, [postId]: "" }));
+      await fetchPosts();
+    }
+    setCommentLoading(null);
+  }
 
   const filtered =
     activeCategory === "all"
@@ -283,8 +306,8 @@ export default function CommunityPage() {
                 </div>
 
                 {/* Comments preview */}
-                {post.comments && post.comments.length > 0 && (
-                  <div className="px-5 pb-4 pt-0">
+                <div className="px-5 pb-4 pt-0">
+                  {post.comments && post.comments.length > 0 && (
                     <div className="border-t border-border pt-3 space-y-3">
                       {post.comments.slice(0, 2).map((comment) => {
                         const commentUser = comment.profiles
@@ -320,8 +343,55 @@ export default function CommunityPage() {
                         </p>
                       )}
                     </div>
-                  </div>
-                )}
+                  )}
+
+                  {/* Comment input */}
+                  {isLoggedIn && currentUser && (
+                    <div className={`flex items-center gap-2 ${post.comments && post.comments.length > 0 ? "mt-3" : "border-t border-border pt-3"}`}>
+                      <UserAvatar
+                        user={{
+                          id: currentUser.id,
+                          displayName: currentUser.displayName,
+                          avatarInitials: currentUser.avatarInitials,
+                          profileImage: currentUser.profileImage ?? null,
+                        }}
+                        size="sm"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Write a comment..."
+                        value={commentText[post.id] || ""}
+                        onChange={(e) =>
+                          setCommentText((prev) => ({
+                            ...prev,
+                            [post.id]: e.target.value,
+                          }))
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleComment(post.id);
+                          }
+                        }}
+                        className="flex-1 bg-surface2 border border-border rounded-lg px-3 py-1.5 text-xs text-foreground placeholder:text-subtle focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand transition-colors"
+                      />
+                      <button
+                        onClick={() => handleComment(post.id)}
+                        disabled={
+                          commentLoading === post.id ||
+                          !(commentText[post.id] || "").trim()
+                        }
+                        className="text-brand hover:opacity-80 disabled:opacity-30 transition-opacity p-1"
+                      >
+                        {commentLoading === post.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
