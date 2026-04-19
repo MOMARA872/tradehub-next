@@ -14,15 +14,25 @@ import {
   MapPin,
   Lock,
   Package,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { UpgradeBanner } from "@/components/dashboard/UpgradeBanner";
+import { WishlistSection } from "@/components/dashboard/WishlistSection";
 
 export default function DashboardPage() {
-  const { currentUser, isLoggedIn } = useAuth();
+  const { currentUser, isLoggedIn, loading: authLoading } = useAuth();
   // TODO: Replace with Supabase queries
   const LISTINGS: Listing[] = [];
   const OFFERS: Offer[] = [];
+
+  if (authLoading) {
+    return (
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 flex justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-brand" />
+      </div>
+    );
+  }
 
   if (!isLoggedIn || !currentUser) {
     return (
@@ -199,6 +209,9 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
+
+      {/* Wishlist */}
+      <WishlistSection userId={currentUser.id} />
     </div>
   );
 }

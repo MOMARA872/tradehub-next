@@ -16,25 +16,31 @@ export function PhotoGallery({
   condition: ConditionKey;
 }) {
   const [activePhoto, setActivePhoto] = useState(0);
-  const displayPhotos = photos.length > 0 ? photos : ["https://placehold.co/600x400/1E2330/A0A8BE?text=No+Photo"];
+  const hasPhotos = photos.length > 0;
 
-  const showNav = displayPhotos.length > 1;
+  const showNav = hasPhotos && photos.length > 1;
   const goPrev = () =>
-    setActivePhoto((i) => (i - 1 + displayPhotos.length) % displayPhotos.length);
+    setActivePhoto((i) => (i - 1 + photos.length) % photos.length);
   const goNext = () =>
-    setActivePhoto((i) => (i + 1) % displayPhotos.length);
+    setActivePhoto((i) => (i + 1) % photos.length);
 
   return (
     <div>
       <div className="relative aspect-[4/3] bg-surface2 rounded-[var(--radius-lg)] overflow-hidden mb-3">
-        <Image
-          src={displayPhotos[activePhoto]}
-          alt={title}
-          fill
-          className="object-contain"
-          sizes="(max-width: 1024px) 100vw, 66vw"
-          priority
-        />
+        {hasPhotos ? (
+          <Image
+            src={photos[activePhoto]}
+            alt={title}
+            fill
+            className="object-contain"
+            sizes="(max-width: 1024px) 100vw, 66vw"
+            priority
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <span className="text-muted text-sm font-medium">{title}</span>
+          </div>
+        )}
         <ConditionBadge condition={condition} />
         {showNav && (
           <>
@@ -55,14 +61,14 @@ export function PhotoGallery({
               <ChevronRight className="h-5 w-5" />
             </button>
             <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-md">
-              {activePhoto + 1} / {displayPhotos.length}
+              {activePhoto + 1} / {photos.length}
             </div>
           </>
         )}
       </div>
       {showNav && (
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {displayPhotos.map((p, i) => (
+          {photos.map((p, i) => (
             <button
               key={i}
               onClick={() => setActivePhoto(i)}

@@ -38,8 +38,36 @@ export async function GET(request: Request) {
       }
     );
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // Clear any external profile image (Google, Facebook, etc.) that may
+      // have been stored. We only allow images hosted on our own storage.
+      const userId = sessionData.session?.user?.id;
+      if (userId) {
+        const supabaseHost = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname;
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("profile_image")
+          .eq("id", userId)
+          .single();
+        if (profile?.profile_image) {
+          try {
+            const imgHost = new URL(profile.profile_image).hostname;
+            if (imgHost !== supabaseHost) {
+              await supabase
+                .from("profiles")
+                .update({ profile_image: null })
+                .eq("id", userId);
+            }
+          } catch {
+            // Malformed URL — clear it
+            await supabase
+              .from("profiles")
+              .update({ profile_image: null })
+              .eq("id", userId);
+          }
+        }
+      }
       return NextResponse.redirect(`${origin}${next}`);
     }
 

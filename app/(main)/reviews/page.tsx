@@ -320,7 +320,7 @@ function WriteReviewModal({
 
 // --- Main Reviews Page ---
 export default function ReviewsPage() {
-  const { currentUser, isLoggedIn } = useAuth();
+  const { currentUser, isLoggedIn, loading: authLoading } = useAuth();
   const supabase = createClient();
 
   const [reviews, setReviews] = useState<BlindReview[]>([]);
@@ -351,6 +351,14 @@ export default function ReviewsPage() {
   useEffect(() => {
     if (currentUser) fetchReviews();
   }, [currentUser, fetchReviews]);
+
+  if (authLoading) {
+    return (
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 flex justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-brand" />
+      </div>
+    );
+  }
 
   if (!isLoggedIn || !currentUser) {
     return (

@@ -10,7 +10,15 @@ import { Link2, Trophy, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export default function TradeChainPage() {
-  const { currentUser, isLoggedIn } = useAuth();
+  const { currentUser, isLoggedIn, loading: authLoading } = useAuth();
+
+  if (authLoading) {
+    return (
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 flex justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+      </div>
+    );
+  }
 
   if (!isLoggedIn || !currentUser) {
     return (

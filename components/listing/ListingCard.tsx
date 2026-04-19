@@ -9,19 +9,25 @@ import { MapPin } from 'lucide-react';
 
 function ListingCard({ listing }: { listing: Listing }) {
   const user = null as (User | null); // TODO: fetch from Supabase
-  const photo = listing.photos[0] || 'https://placehold.co/400x300/1E2330/A0A8BE?text=No+Photo';
+  const photo = listing.photos[0] || null;
 
   return (
     <Link href={`/listing/${listing.id}`} className="group block">
       <div className="bg-card border border-border rounded-[var(--radius-md)] overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
         <div className="relative aspect-[4/3] overflow-hidden bg-surface3">
-          <Image
-            src={photo}
-            alt={listing.title}
-            fill
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-          />
+          {photo ? (
+            <Image
+              src={photo}
+              alt={listing.title}
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full px-3">
+              <span className="text-muted text-xs font-medium text-center leading-tight">{listing.title}</span>
+            </div>
+          )}
           <ConditionBadge condition={listing.condition} />
         </div>
         <div className="p-4">

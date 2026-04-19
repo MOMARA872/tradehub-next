@@ -13,13 +13,22 @@ import {
   TrendingUp,
   Smartphone,
   Monitor,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { Lock, Crown } from "lucide-react";
 
 export default function AnalyticsPage() {
-  const { currentUser, isLoggedIn } = useAuth();
+  const { currentUser, isLoggedIn, loading: authLoading } = useAuth();
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  if (authLoading) {
+    return (
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-16 flex justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-brand" />
+      </div>
+    );
+  }
 
   if (!isLoggedIn || !currentUser) {
     return (

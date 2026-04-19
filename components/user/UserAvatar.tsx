@@ -12,19 +12,39 @@ const sizeMap = {
   lg: { classes: 'h-20 w-20 min-h-20 min-w-20 text-2xl', px: 80 },
 };
 
+const SUPABASE_HOST = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
+  : '';
+
+function isAllowedImageUrl(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname;
+    return hostname === SUPABASE_HOST
+      || hostname === 'images.unsplash.com'
+      || hostname === 'plus.unsplash.com'
+      || hostname === 'placehold.co';
+  } catch {
+    return false;
+  }
+}
+
 function UserAvatar({ user, size = 'md' }: { user: MinimalUser | null; size?: 'sm' | 'md' | 'lg' }) {
   const { classes, px } = sizeMap[size];
 
-  if (user?.profileImage) {
+  const safeImage = user?.profileImage && isAllowedImageUrl(user.profileImage)
+    ? user.profileImage
+    : null;
+
+  if (safeImage) {
     return (
       <div className={cn('rounded-full overflow-hidden shrink-0', classes)}>
         <Image
-          src={user.profileImage}
-          alt={user.displayName}
+          src={safeImage}
+          alt={user!.displayName}
           width={px}
           height={px}
           className="h-full w-full object-cover"
-          title={user.displayName}
+          title={user!.displayName}
         />
       </div>
     );

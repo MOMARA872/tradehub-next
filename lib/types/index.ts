@@ -247,13 +247,33 @@ export interface DbOffer {
   created_at: string;
 }
 
+// Only allow images hosted on our own Supabase storage or known safe domains.
+// External OAuth provider images (Google, Facebook, etc.) are rejected to
+// prevent Next.js Image optimisation errors from unregistered hostnames.
+const ALLOWED_IMAGE_HOSTS = new Set([
+  new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://localhost').hostname,
+  'images.unsplash.com',
+  'plus.unsplash.com',
+  'placehold.co',
+]);
+
+function sanitizeProfileImage(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  try {
+    const hostname = new URL(url).hostname;
+    return ALLOWED_IMAGE_HOSTS.has(hostname) ? url : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 // Helper to convert DB row to frontend type
 export function dbProfileToUser(p: DbProfile): User {
   return {
     id: p.id,
     displayName: p.display_name,
     avatarInitials: p.avatar_initials,
-    profileImage: p.profile_image ?? undefined,
+    profileImage: sanitizeProfileImage(p.profile_image),
     city: p.city,
     bio: p.bio,
     isVerified: p.is_verified,

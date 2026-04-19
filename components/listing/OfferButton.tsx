@@ -5,7 +5,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { formatPrice } from "@/lib/helpers/format";
 import { createNotification } from "@/lib/helpers/notifications";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { Crown, Check, Package } from "lucide-react";
 import {
   Dialog,
   DialogTrigger,
@@ -25,18 +27,52 @@ interface ListingSnippet {
   price_type: string;
 }
 
+interface MyListing {
+  id: string;
+  title: string;
+  price: number;
+  price_type: string;
+}
+
 export function OfferButton({ listing }: { listing: ListingSnippet }) {
   const supabase = createClient();
+  const { currentUser } = useAuth();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [offerAmount, setOfferAmount] = useState("");
   const [offerMessage, setOfferMessage] = useState("");
+  const [myListings, setMyListings] = useState<MyListing[]>([]);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [loadingListings, setLoadingListings] = useState(false);
+
+  const isPro =
+    currentUser?.tier === "pro" &&
+    (currentUser?.subscriptionStatus === "active" ||
+      currentUser?.subscriptionStatus === "trialing");
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setCurrentUserId(user?.id ?? null);
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Fetch user's own listings for trade offers (all users)
+  useEffect(() => {
+    if (!currentUserId) return;
+    setLoadingListings(true);
+    supabase
+      .from("listings")
+      .select("id, title, price, price_type")
+      .eq("user_id", currentUserId)
+      .eq("status", "active")
+      .neq("id", listing.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        setMyListings(data ?? []);
+        setLoadingListings(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId]);
 
   const isOwner = currentUserId === listing.user_id;
 
@@ -51,31 +87,63 @@ export function OfferButton({ listing }: { listing: ListingSnippet }) {
     );
   }
 
+  function toggleItem(id: string) {
+    setSelectedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   async function handleSendOffer() {
-    if (!currentUserId || !offerAmount) return;
+    if (!currentUserId) return;
+
+    const tradeItems = myListings
+      .filter((l) => selectedItems.has(l.id))
+      .map((l) => l.title);
+    const tradeDescription =
+      tradeItems.length > 0 ? `Trade: ${tradeItems.join(", ")}` : null;
+    const cashAmount = isPro && offerAmount ? parseFloat(offerAmount) : 0;
+
+    // Must have at least trade items or a cash amount (Pro only)
+    if (tradeItems.length === 0 && cashAmount === 0) return;
+
     const { error } = await supabase.from("offers").insert({
       listing_id: listing.id,
       buyer_id: currentUserId,
-      offer_amount: parseFloat(offerAmount),
+      offer_amount: cashAmount,
+      trade_description: tradeDescription,
       message: offerMessage,
     });
     if (error) {
       toast.error("Failed to send offer");
       return;
     }
-    // Notify the seller
+
+    // Build notification
+    const parts: string[] = [];
+    if (tradeItems.length > 0)
+      parts.push(
+        `${tradeItems.length} item${tradeItems.length > 1 ? "s" : ""}`
+      );
+    if (cashAmount > 0) parts.push(`$${cashAmount.toFixed(2)}`);
+
     await createNotification({
       supabase,
       userId: listing.user_id,
       type: "offer_received",
       icon: "DollarSign",
-      title: `New offer: $${parseFloat(offerAmount).toFixed(2)}`,
+      title: `New offer: ${parts.join(" + ")}`,
       body: `Someone made an offer on "${listing.title}"`,
       link: "/offers",
     });
+
     toast.success("Offer sent!");
     window.location.reload();
   }
+
+  const canSubmit = selectedItems.size > 0 || (isPro && !!offerAmount);
 
   return (
     <Dialog>
@@ -91,19 +159,111 @@ export function OfferButton({ listing }: { listing: ListingSnippet }) {
           <DialogDescription className="text-xs text-muted mb-4">
             for &ldquo;{listing.title}&rdquo;
           </DialogDescription>
-          <div className="space-y-3">
+          <div className="space-y-4">
+            {/* Trade items — available to everyone */}
             <div>
-              <label className="text-xs font-medium text-foreground block mb-1">Offer Amount ($)</label>
-              <input
-                type="number"
-                value={offerAmount}
-                onChange={(e) => setOfferAmount(e.target.value)}
-                placeholder={`Asking: ${formatPrice(listing.price, listing.price_type as "fixed" | "free" | "trade" | "negotiable")}`}
-                className="w-full bg-surface2 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-subtle focus:outline-none focus:ring-1 focus:ring-brand"
-              />
+              <label className="text-xs font-medium text-foreground block mb-2">
+                Select items to trade
+              </label>
+              {loadingListings ? (
+                <div className="text-xs text-muted py-4 text-center">
+                  Loading your listings...
+                </div>
+              ) : myListings.length === 0 ? (
+                <div className="bg-surface2 border border-border rounded-lg p-4 text-center">
+                  <Package className="h-6 w-6 text-muted mx-auto mb-2" />
+                  <p className="text-xs text-muted">
+                    You don&apos;t have any active listings to trade.
+                  </p>
+                  <Link
+                    href="/post-new"
+                    className="text-xs text-brand font-medium hover:underline mt-1 inline-block"
+                  >
+                    Post a listing first
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                  {myListings.map((item) => {
+                    const selected = selectedItems.has(item.id);
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => toggleItem(item.id)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left transition-colors ${
+                          selected
+                            ? "bg-brand/10 border-brand text-foreground"
+                            : "bg-surface2 border-border text-muted hover:border-brand/30"
+                        }`}
+                      >
+                        <div
+                          className={`shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                            selected
+                              ? "bg-brand border-brand"
+                              : "border-border"
+                          }`}
+                        >
+                          {selected && (
+                            <Check className="h-2.5 w-2.5 text-white" />
+                          )}
+                        </div>
+                        <span className="text-sm font-medium truncate flex-1">
+                          {item.title}
+                        </span>
+                        <span className="text-xs text-subtle shrink-0">
+                          {formatPrice(
+                            item.price,
+                            item.price_type as
+                              | "fixed"
+                              | "free"
+                              | "trade"
+                              | "negotiable"
+                          )}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
+
+            {/* Cash offer — Pro only */}
+            {isPro ? (
+              <div>
+                <label className="text-xs font-medium text-foreground block mb-1">
+                  <span className="inline-flex items-center gap-1">
+                    Offer Amount ($)
+                    <Crown className="h-3 w-3 text-brand" />
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  value={offerAmount}
+                  onChange={(e) => setOfferAmount(e.target.value)}
+                  placeholder={`Asking: ${formatPrice(listing.price, listing.price_type as "fixed" | "free" | "trade" | "negotiable")}`}
+                  className="w-full bg-surface2 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-subtle focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+                {selectedItems.size > 0 && offerAmount && (
+                  <p className="text-[10px] text-subtle mt-1">
+                    Items + cash will be combined in your offer
+                  </p>
+                )}
+              </div>
+            ) : (
+              <Link
+                href="/premium"
+                className="flex items-center gap-1.5 text-xs text-brand font-medium hover:underline"
+              >
+                <Crown className="h-3 w-3" />
+                Upgrade to Pro to add cash offers
+              </Link>
+            )}
+
             <div>
-              <label className="text-xs font-medium text-foreground block mb-1">Message (optional)</label>
+              <label className="text-xs font-medium text-foreground block mb-1">
+                Message (optional)
+              </label>
               <textarea
                 value={offerMessage}
                 onChange={(e) => setOfferMessage(e.target.value)}
@@ -119,7 +279,8 @@ export function OfferButton({ listing }: { listing: ListingSnippet }) {
             </DialogClose>
             <button
               onClick={handleSendOffer}
-              className="flex-1 bg-brand text-white text-sm font-semibold py-2 rounded-lg hover:opacity-90 transition-opacity"
+              disabled={!canSubmit}
+              className="flex-1 bg-brand text-white text-sm font-semibold py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               Send Offer
             </button>
