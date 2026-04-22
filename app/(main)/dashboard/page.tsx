@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { UpgradeBanner } from "@/components/dashboard/UpgradeBanner";
-import { WishlistSection } from "@/components/dashboard/WishlistSection";
 
 export default function DashboardPage() {
   const { currentUser, isLoggedIn, loading: authLoading } = useAuth();
@@ -209,9 +208,6 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
-
-      {/* Wishlist */}
-      <WishlistSection userId={currentUser.id} />
     </div>
   );
 }
