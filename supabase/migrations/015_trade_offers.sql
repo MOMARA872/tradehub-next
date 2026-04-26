@@ -176,3 +176,29 @@ create policy "Trade offers public; cash offers participant-only"
 drop policy if exists "Authenticated users can create offers" on offers;
 create policy "Authenticated users can create offers as proposer"
   on offers for insert with check (auth.uid() = proposer_id);
+
+-- ============================================================
+-- RLS: offer_items
+-- ============================================================
+
+alter table offer_items enable row level security;
+
+create policy "Offer items follow parent offer visibility"
+  on offer_items for select using (
+    exists (
+      select 1 from offers o
+      where o.id = offer_items.offer_id
+        and (o.offer_type = 'trade'
+             or auth.uid() = o.buyer_id
+             or auth.uid() = o.proposer_id
+             or auth.uid() in (select user_id from listings where id = o.listing_id))
+    )
+  );
+
+create policy "Proposer can add items to own pending offer"
+  on offer_items for insert with check (
+    exists (
+      select 1 from offers
+      where id = offer_id and proposer_id = auth.uid() and status = 'pending'
+    )
+  );
