@@ -150,3 +150,29 @@ alter table notifications add constraint notifications_type_check
     'trade_offer_withdrawn',
     'trade_offer_completed'
   ));
+
+-- ============================================================
+-- RLS: offers
+-- Trade offers are publicly readable (anyone, even logged out).
+-- Cash offers stay participant-only.
+-- All UPDATEs go through SECURITY DEFINER stored functions —
+-- clients can never UPDATE offers directly.
+-- Use "if exists" on policy drops to match the project pattern and
+-- survive partial replays.
+-- ============================================================
+
+drop policy if exists "Offer participants can read offers" on offers;
+drop policy if exists "Offer participants can update offers" on offers;
+
+create policy "Trade offers public; cash offers participant-only"
+  on offers for select using (
+    offer_type = 'trade'
+    or auth.uid() = buyer_id
+    or auth.uid() = proposer_id
+    or auth.uid() in (select user_id from listings where id = listing_id)
+  );
+
+-- Replace insert policy: proposer must be the authenticated user
+drop policy if exists "Authenticated users can create offers" on offers;
+create policy "Authenticated users can create offers as proposer"
+  on offers for insert with check (auth.uid() = proposer_id);
