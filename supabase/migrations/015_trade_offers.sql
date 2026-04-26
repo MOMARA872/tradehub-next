@@ -481,3 +481,61 @@ begin
   return v_new_id;
 end;
 $$;
+
+-- ============================================================
+-- accept_offer — listing owner accepts a pending offer.
+-- Atomically: sets status, flips involved listings to 'in_trade',
+-- creates/reuses a thread and pins the offer, notifies the buyer.
+-- (Listing-wide and item-overlap auto-pass added in Tasks 15-16.)
+-- ============================================================
+
+create or replace function accept_offer(p_offer_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_caller     uuid := auth.uid();
+  v_offer      offers%rowtype;
+  v_owner      uuid;
+  v_thread_id  uuid;
+begin
+  if v_caller is null then raise exception 'Authentication required'; end if;
+
+  select * into v_offer from offers where id = p_offer_id for update;
+  if v_offer.id is null then raise exception 'Offer not found'; end if;
+  if v_offer.status <> 'pending' then
+    raise exception 'Offer is not pending (status=%)', v_offer.status;
+  end if;
+
+  select user_id into v_owner from listings where id = v_offer.listing_id;
+  if v_owner <> v_caller then
+    raise exception 'Only the listing owner can accept';
+  end if;
+
+  -- Set this offer accepted
+  update offers set status = 'accepted' where id = v_offer.id;
+
+  -- Flip the seller's listing + all offered items to 'in_trade'
+  update listings set status = 'in_trade' where id = v_offer.listing_id;
+  update listings set status = 'in_trade'
+    where id in (select listing_id from offer_items where offer_id = v_offer.id);
+
+  -- Create or reuse a thread between owner and buyer for this listing
+  insert into threads (listing_id, buyer_id, seller_id, listing_title, pinned_offer_id)
+    values (v_offer.listing_id, v_offer.buyer_id, v_owner,
+            (select title from listings where id = v_offer.listing_id),
+            v_offer.id)
+    on conflict (listing_id, buyer_id) do update
+      set pinned_offer_id = excluded.pinned_offer_id
+    returning id into v_thread_id;
+
+  -- Notify buyer
+  insert into notifications (user_id, type, title, body, link)
+  values (v_offer.buyer_id, 'trade_offer_accepted',
+          'Offer accepted!',
+          'Your trade offer was accepted. Open the chat to coordinate.',
+          '/threads/' || v_thread_id);
+end;
+$$;
