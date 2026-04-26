@@ -43,24 +43,21 @@ export async function GET(request: Request) {
       // Clear any external profile image (Google, Facebook, etc.) that may
       // have been stored. We only allow images hosted on our own storage.
       const userId = sessionData.session?.user?.id;
-      if (userId) {
-        const supabaseHost = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname;
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      let supabaseHost: string | null = null;
+      if (supabaseUrl) {
+        try { supabaseHost = new URL(supabaseUrl).hostname; } catch {}
+      }
+      if (userId && supabaseHost) {
         const { data: profile } = await supabase
           .from("profiles")
           .select("profile_image")
           .eq("id", userId)
           .single();
         if (profile?.profile_image) {
-          try {
-            const imgHost = new URL(profile.profile_image).hostname;
-            if (imgHost !== supabaseHost) {
-              await supabase
-                .from("profiles")
-                .update({ profile_image: null })
-                .eq("id", userId);
-            }
-          } catch {
-            // Malformed URL — clear it
+          let imgHost: string | null = null;
+          try { imgHost = new URL(profile.profile_image).hostname; } catch {}
+          if (imgHost !== supabaseHost) {
             await supabase
               .from("profiles")
               .update({ profile_image: null })

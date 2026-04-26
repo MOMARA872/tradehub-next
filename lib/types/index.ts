@@ -250,12 +250,16 @@ export interface DbOffer {
 // Only allow images hosted on our own Supabase storage or known safe domains.
 // External OAuth provider images (Google, Facebook, etc.) are rejected to
 // prevent Next.js Image optimisation errors from unregistered hostnames.
-const ALLOWED_IMAGE_HOSTS = new Set([
-  new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://localhost').hostname,
-  'images.unsplash.com',
-  'plus.unsplash.com',
-  'placehold.co',
-]);
+const SUPABASE_HOST = (() => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) return null;
+  try { return new URL(url).hostname; } catch { return null; }
+})();
+
+const ALLOWED_IMAGE_HOSTS = new Set(
+  [SUPABASE_HOST, 'images.unsplash.com', 'plus.unsplash.com', 'placehold.co']
+    .filter((h): h is string => Boolean(h))
+);
 
 function sanitizeProfileImage(url: string | null | undefined): string | undefined {
   if (!url) return undefined;
