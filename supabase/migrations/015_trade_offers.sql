@@ -71,3 +71,33 @@ create trigger offers_set_updated_at
 create index if not exists idx_offers_parent         on offers(parent_offer_id);
 create index if not exists idx_offers_proposer       on offers(proposer_id);
 create index if not exists idx_offers_listing_status on offers(listing_id, status);
+
+-- ============================================================
+-- offer_items: structured items in a trade offer
+-- offers.listing_id  = SELLER's listing being traded for
+-- offer_items.listing_id = BUYER's listings being put up
+-- ============================================================
+
+create table offer_items (
+  offer_id   uuid not null references offers(id)   on delete cascade,
+  listing_id uuid not null references listings(id) on delete restrict,
+  position   smallint not null default 0,
+  created_at timestamptz not null default now(),
+  primary key (offer_id, listing_id)
+);
+
+create index idx_offer_items_listing on offer_items(listing_id);
+
+-- Cap of 5 items per offer
+create or replace function enforce_offer_item_cap()
+returns trigger as $$
+begin
+  if (select count(*) from offer_items where offer_id = new.offer_id) >= 5 then
+    raise exception 'Trade offer cannot include more than 5 items';
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger offer_items_cap before insert on offer_items
+  for each row execute function enforce_offer_item_cap();
