@@ -332,3 +332,44 @@ begin
           '/listings/' || v_listing_id || '#pass-list');
 end;
 $$;
+
+-- ============================================================
+-- withdraw_offer — proposer pulls back their own offer
+-- ============================================================
+
+create or replace function withdraw_offer(p_offer_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_caller     uuid := auth.uid();
+  v_proposer   uuid;
+  v_status     text;
+  v_listing_id uuid;
+  v_owner      uuid;
+begin
+  if v_caller is null then raise exception 'Authentication required'; end if;
+
+  select proposer_id, status, listing_id into v_proposer, v_status, v_listing_id
+    from offers where id = p_offer_id for update;
+  if v_status is null then raise exception 'Offer not found'; end if;
+  if v_status <> 'pending' then
+    raise exception 'Offer is not pending (status=%)', v_status;
+  end if;
+  if v_proposer <> v_caller then
+    raise exception 'Only the proposer can withdraw';
+  end if;
+
+  update offers set status = 'withdrawn' where id = p_offer_id;
+
+  -- Notify the recipient (the listing owner of the parent listing)
+  select user_id into v_owner from listings where id = v_listing_id;
+  insert into notifications (user_id, type, title, body, link)
+  values (v_owner, 'trade_offer_withdrawn',
+          'Offer withdrawn',
+          'A pending offer on your listing was withdrawn.',
+          '/listings/' || v_listing_id || '/offers');
+end;
+$$;
