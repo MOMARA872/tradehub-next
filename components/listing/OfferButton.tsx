@@ -106,8 +106,8 @@ export function OfferButton({ listing }: { listing: ListingSnippet }) {
       tradeItems.length > 0 ? `Trade: ${tradeItems.join(", ")}` : null;
     const cashAmount = isPro && offerAmount ? parseFloat(offerAmount) : 0;
 
-    // Must have at least trade items or a cash amount (Pro only)
-    if (tradeItems.length === 0 && cashAmount === 0) return;
+    // Must have at least trade items or a positive cash amount (Pro only)
+    if (tradeItems.length === 0 && !(cashAmount > 0)) return;
 
     const { error } = await supabase.from("offers").insert({
       listing_id: listing.id,
@@ -143,7 +143,8 @@ export function OfferButton({ listing }: { listing: ListingSnippet }) {
     window.location.reload();
   }
 
-  const canSubmit = selectedItems.size > 0 || (isPro && !!offerAmount);
+  const canSubmit =
+    selectedItems.size > 0 || (isPro && parseFloat(offerAmount) > 0);
 
   return (
     <Dialog>
@@ -239,6 +240,8 @@ export function OfferButton({ listing }: { listing: ListingSnippet }) {
                 </label>
                 <input
                   type="number"
+                  min="0.01"
+                  step="0.01"
                   value={offerAmount}
                   onChange={(e) => setOfferAmount(e.target.value)}
                   placeholder={`Asking: ${formatPrice(listing.price, listing.price_type as "fixed" | "free" | "trade" | "negotiable")}`}

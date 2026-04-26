@@ -243,13 +243,14 @@ export default function OffersPage() {
                       </Link>
                     )}
 
-                    <div className="flex items-center gap-2 mt-2">
-                      {offer.trade_description ? (
+                    <div className="flex flex-col gap-1 mt-2">
+                      {offer.trade_description && (
                         <div className="flex items-center gap-1.5 text-sm text-foreground">
                           <ArrowLeftRight className="h-3.5 w-3.5 text-muted" />
                           <span>{truncate(offer.trade_description, 80)}</span>
                         </div>
-                      ) : (
+                      )}
+                      {offer.offer_amount > 0 && (
                         <div className="flex items-center gap-1.5 text-sm text-foreground">
                           <DollarSign className="h-3.5 w-3.5 text-muted" />
                           <span className="font-semibold">

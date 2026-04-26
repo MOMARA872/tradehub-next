@@ -222,9 +222,14 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                           {offer.status}
                         </span>
                       </div>
-                      <p className="text-sm font-medium text-foreground">
-                        {offer.offer_amount > 0 ? `$${offer.offer_amount}` : offer.trade_description}
-                      </p>
+                      <div className="text-sm font-medium text-foreground space-y-0.5">
+                        {offer.trade_description && (
+                          <p>{offer.trade_description}</p>
+                        )}
+                        {offer.offer_amount > 0 && (
+                          <p>${offer.offer_amount}</p>
+                        )}
+                      </div>
                       {offer.message && (
                         <p className="text-xs text-muted mt-1 italic">&ldquo;{offer.message}&rdquo;</p>
                       )}
