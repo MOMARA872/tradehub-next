@@ -4,7 +4,7 @@
 
 **Goal:** Land the entire database layer for the Trade Offers feature — migration file, stored functions, RLS policies, and SQL verification scenarios. After this plan, the DB layer is fully working and tested with no UI yet.
 
-**Architecture:** A single migration `supabase/migrations/010_trade_offers.sql` extends the existing `offers` table with an `offer_type` discriminator, adds `offer_items` join table, extends `listings.status` and `threads`, and adds 6 SECURITY DEFINER stored functions for atomic state transitions. RLS policies make trade offers publicly readable; all status changes flow through stored functions (clients can't UPDATE offers directly). Verification scenarios live in `supabase/tests/database/` and run via plain `psql` — no pgTAP needed.
+**Architecture:** A single migration `supabase/migrations/015_trade_offers.sql` extends the existing `offers` table with an `offer_type` discriminator, adds `offer_items` join table, extends `listings.status` and `threads`, and adds 6 SECURITY DEFINER stored functions for atomic state transitions. RLS policies make trade offers publicly readable; all status changes flow through stored functions (clients can't UPDATE offers directly). Verification scenarios live in `supabase/tests/database/` and run via plain `psql` — no pgTAP needed.
 
 **Tech Stack:** Supabase (Postgres 15), Supabase CLI for local testing. Functions in plpgsql.
 
@@ -49,7 +49,7 @@ psql "$LOCAL_DB" -f supabase/tests/database/test_<name>.sql
 ## File Structure
 
 ### New files
-- `supabase/migrations/010_trade_offers.sql` — the entire migration (built up incrementally across tasks)
+- `supabase/migrations/015_trade_offers.sql` — the entire migration (built up incrementally across tasks)
 - `supabase/tests/database/README.md` — how to run the tests
 - `supabase/tests/database/test_create_trade_offer.sql`
 - `supabase/tests/database/test_pass_offer.sql`
@@ -73,15 +73,15 @@ psql "$LOCAL_DB" -f supabase/tests/database/test_<name>.sql
 ## Task 1: Create migration scaffold and test directory
 
 **Files:**
-- Create: `supabase/migrations/010_trade_offers.sql`
+- Create: `supabase/migrations/015_trade_offers.sql`
 - Create: `supabase/tests/database/README.md`
 - Create: `supabase/tests/database/_helpers.sql`
 
 - [ ] **Step 1: Create the migration file with header**
 
 ```bash
-cat > supabase/migrations/010_trade_offers.sql << 'EOF'
--- supabase/migrations/010_trade_offers.sql
+cat > supabase/migrations/015_trade_offers.sql << 'EOF'
+-- supabase/migrations/015_trade_offers.sql
 -- Async Trade Offers — DB foundation
 -- Spec: docs/superpowers/specs/2026-04-26-async-trade-offers-design.md
 --
@@ -180,7 +180,7 @@ EOF
 - [ ] **Step 4: Commit**
 
 ```bash
-git add supabase/migrations/010_trade_offers.sql supabase/tests/database/
+git add supabase/migrations/015_trade_offers.sql supabase/tests/database/
 git commit -m "feat(trade-offers): scaffold migration and test directory"
 ```
 
@@ -189,12 +189,12 @@ git commit -m "feat(trade-offers): scaffold migration and test directory"
 ## Task 2: Add `set_updated_at` helper trigger function
 
 **Files:**
-- Modify: `supabase/migrations/010_trade_offers.sql`
+- Modify: `supabase/migrations/015_trade_offers.sql`
 
 - [ ] **Step 1: Append helper function to migration**
 
 ```bash
-cat >> supabase/migrations/010_trade_offers.sql << 'EOF'
+cat >> supabase/migrations/015_trade_offers.sql << 'EOF'
 
 -- ============================================================
 -- Helper trigger function (re-usable)
@@ -229,7 +229,7 @@ Expected output contains: `set_updated_at`
 - [ ] **Step 4: Commit**
 
 ```bash
-git add supabase/migrations/010_trade_offers.sql
+git add supabase/migrations/015_trade_offers.sql
 git commit -m "feat(trade-offers): add set_updated_at helper"
 ```
 
@@ -238,12 +238,12 @@ git commit -m "feat(trade-offers): add set_updated_at helper"
 ## Task 3: Extend `offers` table with new columns
 
 **Files:**
-- Modify: `supabase/migrations/010_trade_offers.sql`
+- Modify: `supabase/migrations/015_trade_offers.sql`
 
 - [ ] **Step 1: Append schema changes**
 
 ```bash
-cat >> supabase/migrations/010_trade_offers.sql << 'EOF'
+cat >> supabase/migrations/015_trade_offers.sql << 'EOF'
 
 -- ============================================================
 -- offers table extensions
@@ -324,7 +324,7 @@ Expected: ERROR mentioning `offers_status_check` (constraint blocks invalid stat
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/010_trade_offers.sql
+git add supabase/migrations/015_trade_offers.sql
 git commit -m "feat(trade-offers): extend offers table with type, proposer, parent_offer, completion flags"
 ```
 
@@ -333,12 +333,12 @@ git commit -m "feat(trade-offers): extend offers table with type, proposer, pare
 ## Task 4: Create `offer_items` table with 5-item cap trigger
 
 **Files:**
-- Modify: `supabase/migrations/010_trade_offers.sql`
+- Modify: `supabase/migrations/015_trade_offers.sql`
 
 - [ ] **Step 1: Append table + trigger**
 
 ```bash
-cat >> supabase/migrations/010_trade_offers.sql << 'EOF'
+cat >> supabase/migrations/015_trade_offers.sql << 'EOF'
 
 -- ============================================================
 -- offer_items: structured items in a trade offer
@@ -426,7 +426,7 @@ Expected: `NOTICE:  PASS: 5-item cap enforced`
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/010_trade_offers.sql
+git add supabase/migrations/015_trade_offers.sql
 git commit -m "feat(trade-offers): add offer_items table with 5-item cap trigger"
 ```
 
@@ -435,12 +435,12 @@ git commit -m "feat(trade-offers): add offer_items table with 5-item cap trigger
 ## Task 5: Extend `listings.status` to include `'in_trade'`
 
 **Files:**
-- Modify: `supabase/migrations/010_trade_offers.sql`
+- Modify: `supabase/migrations/015_trade_offers.sql`
 
 - [ ] **Step 1: Append schema change**
 
 ```bash
-cat >> supabase/migrations/010_trade_offers.sql << 'EOF'
+cat >> supabase/migrations/015_trade_offers.sql << 'EOF'
 
 -- ============================================================
 -- listings: add 'in_trade' status (between accept and complete)
@@ -488,7 +488,7 @@ Expected: `NOTICE:  PASS: in_trade status accepted`
 - [ ] **Step 4: Commit**
 
 ```bash
-git add supabase/migrations/010_trade_offers.sql
+git add supabase/migrations/015_trade_offers.sql
 git commit -m "feat(trade-offers): add in_trade to listings.status constraint"
 ```
 
@@ -497,12 +497,12 @@ git commit -m "feat(trade-offers): add in_trade to listings.status constraint"
 ## Task 6: Add `pinned_offer_id` to threads
 
 **Files:**
-- Modify: `supabase/migrations/010_trade_offers.sql`
+- Modify: `supabase/migrations/015_trade_offers.sql`
 
 - [ ] **Step 1: Append schema change**
 
 ```bash
-cat >> supabase/migrations/010_trade_offers.sql << 'EOF'
+cat >> supabase/migrations/015_trade_offers.sql << 'EOF'
 
 -- ============================================================
 -- threads: pin an offer to a thread (for accepted trades)
@@ -527,7 +527,7 @@ Expected: shows `pinned_offer_id` column.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add supabase/migrations/010_trade_offers.sql
+git add supabase/migrations/015_trade_offers.sql
 git commit -m "feat(trade-offers): add threads.pinned_offer_id"
 ```
 
@@ -536,12 +536,12 @@ git commit -m "feat(trade-offers): add threads.pinned_offer_id"
 ## Task 7: Extend `notifications.type` with 7 new trade types
 
 **Files:**
-- Modify: `supabase/migrations/010_trade_offers.sql`
+- Modify: `supabase/migrations/015_trade_offers.sql`
 
 - [ ] **Step 1: Append schema change**
 
 ```bash
-cat >> supabase/migrations/010_trade_offers.sql << 'EOF'
+cat >> supabase/migrations/015_trade_offers.sql << 'EOF'
 
 -- ============================================================
 -- notifications: add 7 trade-offer notification types
@@ -580,7 +580,7 @@ Expected: errors on the FK to user_id (good — that means the type check passed
 - [ ] **Step 3: Commit**
 
 ```bash
-git add supabase/migrations/010_trade_offers.sql
+git add supabase/migrations/015_trade_offers.sql
 git commit -m "feat(trade-offers): add 7 trade-offer notification types"
 ```
 
@@ -589,12 +589,12 @@ git commit -m "feat(trade-offers): add 7 trade-offer notification types"
 ## Task 8: Update RLS policies on `offers`
 
 **Files:**
-- Modify: `supabase/migrations/010_trade_offers.sql`
+- Modify: `supabase/migrations/015_trade_offers.sql`
 
 - [ ] **Step 1: Append RLS changes**
 
 ```bash
-cat >> supabase/migrations/010_trade_offers.sql << 'EOF'
+cat >> supabase/migrations/015_trade_offers.sql << 'EOF'
 
 -- ============================================================
 -- RLS: offers
@@ -642,7 +642,7 @@ Expected: lists `Trade offers public; cash offers participant-only` and `Authent
 - [ ] **Step 4: Commit**
 
 ```bash
-git add supabase/migrations/010_trade_offers.sql
+git add supabase/migrations/015_trade_offers.sql
 git commit -m "feat(trade-offers): update offers RLS for public trade visibility"
 ```
 
@@ -651,12 +651,12 @@ git commit -m "feat(trade-offers): update offers RLS for public trade visibility
 ## Task 9: Add RLS policies on `offer_items`
 
 **Files:**
-- Modify: `supabase/migrations/010_trade_offers.sql`
+- Modify: `supabase/migrations/015_trade_offers.sql`
 
 - [ ] **Step 1: Append RLS for offer_items**
 
 ```bash
-cat >> supabase/migrations/010_trade_offers.sql << 'EOF'
+cat >> supabase/migrations/015_trade_offers.sql << 'EOF'
 
 -- ============================================================
 -- RLS: offer_items
@@ -699,7 +699,7 @@ Expected: lists the two new policies.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add supabase/migrations/010_trade_offers.sql
+git add supabase/migrations/015_trade_offers.sql
 git commit -m "feat(trade-offers): add offer_items RLS policies"
 ```
 
@@ -708,13 +708,13 @@ git commit -m "feat(trade-offers): add offer_items RLS policies"
 ## Task 10: Implement `create_trade_offer()` function
 
 **Files:**
-- Modify: `supabase/migrations/010_trade_offers.sql`
+- Modify: `supabase/migrations/015_trade_offers.sql`
 - Create: `supabase/tests/database/test_create_trade_offer.sql`
 
 - [ ] **Step 1: Append function to migration**
 
 ```bash
-cat >> supabase/migrations/010_trade_offers.sql << 'EOF'
+cat >> supabase/migrations/015_trade_offers.sql << 'EOF'
 
 -- ============================================================
 -- create_trade_offer
@@ -890,7 +890,7 @@ Expected: `NOTICE:  PASS: create_trade_offer`
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/010_trade_offers.sql supabase/tests/database/test_create_trade_offer.sql
+git add supabase/migrations/015_trade_offers.sql supabase/tests/database/test_create_trade_offer.sql
 git commit -m "feat(trade-offers): implement create_trade_offer with self-offer + cap guards"
 ```
 
@@ -899,13 +899,13 @@ git commit -m "feat(trade-offers): implement create_trade_offer with self-offer 
 ## Task 11: Implement `pass_offer()` function
 
 **Files:**
-- Modify: `supabase/migrations/010_trade_offers.sql`
+- Modify: `supabase/migrations/015_trade_offers.sql`
 - Create: `supabase/tests/database/test_pass_offer.sql`
 
 - [ ] **Step 1: Append function**
 
 ```bash
-cat >> supabase/migrations/010_trade_offers.sql << 'EOF'
+cat >> supabase/migrations/015_trade_offers.sql << 'EOF'
 
 -- ============================================================
 -- pass_offer — listing owner passes on an offer
@@ -1017,7 +1017,7 @@ Expected: `NOTICE:  PASS: pass_offer`
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/010_trade_offers.sql supabase/tests/database/test_pass_offer.sql
+git add supabase/migrations/015_trade_offers.sql supabase/tests/database/test_pass_offer.sql
 git commit -m "feat(trade-offers): implement pass_offer"
 ```
 
@@ -1026,13 +1026,13 @@ git commit -m "feat(trade-offers): implement pass_offer"
 ## Task 12: Implement `withdraw_offer()` function
 
 **Files:**
-- Modify: `supabase/migrations/010_trade_offers.sql`
+- Modify: `supabase/migrations/015_trade_offers.sql`
 - Create: `supabase/tests/database/test_withdraw_offer.sql`
 
 - [ ] **Step 1: Append function**
 
 ```bash
-cat >> supabase/migrations/010_trade_offers.sql << 'EOF'
+cat >> supabase/migrations/015_trade_offers.sql << 'EOF'
 
 -- ============================================================
 -- withdraw_offer — proposer pulls back their own offer
@@ -1149,7 +1149,7 @@ Expected: `NOTICE:  PASS: withdraw_offer`
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/010_trade_offers.sql supabase/tests/database/test_withdraw_offer.sql
+git add supabase/migrations/015_trade_offers.sql supabase/tests/database/test_withdraw_offer.sql
 git commit -m "feat(trade-offers): implement withdraw_offer"
 ```
 
@@ -1158,13 +1158,13 @@ git commit -m "feat(trade-offers): implement withdraw_offer"
 ## Task 13: Implement `counter_offer()` function
 
 **Files:**
-- Modify: `supabase/migrations/010_trade_offers.sql`
+- Modify: `supabase/migrations/015_trade_offers.sql`
 - Create: `supabase/tests/database/test_counter_offer.sql`
 
 - [ ] **Step 1: Append function**
 
 ```bash
-cat >> supabase/migrations/010_trade_offers.sql << 'EOF'
+cat >> supabase/migrations/015_trade_offers.sql << 'EOF'
 
 -- ============================================================
 -- counter_offer — receiver of a pending offer counters with a
@@ -1339,7 +1339,7 @@ Expected: `NOTICE:  PASS: counter_offer`
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/010_trade_offers.sql supabase/tests/database/test_counter_offer.sql
+git add supabase/migrations/015_trade_offers.sql supabase/tests/database/test_counter_offer.sql
 git commit -m "feat(trade-offers): implement counter_offer with alternating proposer"
 ```
 
@@ -1348,7 +1348,7 @@ git commit -m "feat(trade-offers): implement counter_offer with alternating prop
 ## Task 14: Implement `accept_offer()` — basic acceptance
 
 **Files:**
-- Modify: `supabase/migrations/010_trade_offers.sql`
+- Modify: `supabase/migrations/015_trade_offers.sql`
 - Create: `supabase/tests/database/test_accept_offer_basic.sql`
 
 This is the heaviest function. We build it up across Tasks 14, 15, 16:
@@ -1359,7 +1359,7 @@ This is the heaviest function. We build it up across Tasks 14, 15, 16:
 - [ ] **Step 1: Append the basic version of accept_offer**
 
 ```bash
-cat >> supabase/migrations/010_trade_offers.sql << 'EOF'
+cat >> supabase/migrations/015_trade_offers.sql << 'EOF'
 
 -- ============================================================
 -- accept_offer — listing owner accepts a pending offer.
@@ -1500,7 +1500,7 @@ Expected: `NOTICE:  PASS: accept_offer basic`
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/010_trade_offers.sql supabase/tests/database/test_accept_offer_basic.sql
+git add supabase/migrations/015_trade_offers.sql supabase/tests/database/test_accept_offer_basic.sql
 git commit -m "feat(trade-offers): implement accept_offer basic flow with thread + pin"
 ```
 
@@ -1509,12 +1509,12 @@ git commit -m "feat(trade-offers): implement accept_offer basic flow with thread
 ## Task 15: Add listing-wide auto-pass to `accept_offer()`
 
 **Files:**
-- Modify: `supabase/migrations/010_trade_offers.sql`
+- Modify: `supabase/migrations/015_trade_offers.sql`
 - Create: `supabase/tests/database/test_accept_offer_listing_wide_autopass.sql`
 
 - [ ] **Step 1: Replace `accept_offer()` with listing-wide auto-pass added**
 
-Open `supabase/migrations/010_trade_offers.sql` and find the `accept_offer` function block. Replace it with:
+Open `supabase/migrations/015_trade_offers.sql` and find the `accept_offer` function block. Replace it with:
 
 ```sql
 -- ============================================================
@@ -1666,7 +1666,7 @@ Expected: `NOTICE:  PASS: accept_offer basic`
 - [ ] **Step 6: Commit**
 
 ```bash
-git add supabase/migrations/010_trade_offers.sql supabase/tests/database/test_accept_offer_listing_wide_autopass.sql
+git add supabase/migrations/015_trade_offers.sql supabase/tests/database/test_accept_offer_listing_wide_autopass.sql
 git commit -m "feat(trade-offers): listing-wide auto-pass on accept"
 ```
 
@@ -1675,12 +1675,12 @@ git commit -m "feat(trade-offers): listing-wide auto-pass on accept"
 ## Task 16: Add item-overlap auto-pass to `accept_offer()`
 
 **Files:**
-- Modify: `supabase/migrations/010_trade_offers.sql`
+- Modify: `supabase/migrations/015_trade_offers.sql`
 - Create: `supabase/tests/database/test_accept_offer_item_overlap_autopass.sql`
 
 - [ ] **Step 1: Update `accept_offer()` to add item-overlap auto-pass**
 
-In `supabase/migrations/010_trade_offers.sql`, find the listing-wide auto-pass loop you just added and insert a new block right after it. Replace this section:
+In `supabase/migrations/015_trade_offers.sql`, find the listing-wide auto-pass loop you just added and insert a new block right after it. Replace this section:
 
 ```sql
   -- Listing-wide auto-pass: every other pending offer on this listing
@@ -1809,7 +1809,7 @@ Both expected: PASS notices.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add supabase/migrations/010_trade_offers.sql supabase/tests/database/test_accept_offer_item_overlap_autopass.sql
+git add supabase/migrations/015_trade_offers.sql supabase/tests/database/test_accept_offer_item_overlap_autopass.sql
 git commit -m "feat(trade-offers): item-overlap auto-pass on accept"
 ```
 
@@ -1818,13 +1818,13 @@ git commit -m "feat(trade-offers): item-overlap auto-pass on accept"
 ## Task 17: Implement `mark_offer_complete()`
 
 **Files:**
-- Modify: `supabase/migrations/010_trade_offers.sql`
+- Modify: `supabase/migrations/015_trade_offers.sql`
 - Create: `supabase/tests/database/test_mark_offer_complete.sql`
 
 - [ ] **Step 1: Append function**
 
 ```bash
-cat >> supabase/migrations/010_trade_offers.sql << 'EOF'
+cat >> supabase/migrations/015_trade_offers.sql << 'EOF'
 
 -- ============================================================
 -- mark_offer_complete — both-sides handshake.
@@ -1960,7 +1960,7 @@ Expected: `NOTICE:  PASS: mark_offer_complete`
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/010_trade_offers.sql supabase/tests/database/test_mark_offer_complete.sql
+git add supabase/migrations/015_trade_offers.sql supabase/tests/database/test_mark_offer_complete.sql
 git commit -m "feat(trade-offers): implement mark_offer_complete handshake"
 ```
 
@@ -1969,7 +1969,7 @@ git commit -m "feat(trade-offers): implement mark_offer_complete handshake"
 ## Task 18: Trigger — auto-pass pending offers when listing becomes `sold` or `expired`
 
 **Files:**
-- Modify: `supabase/migrations/010_trade_offers.sql`
+- Modify: `supabase/migrations/015_trade_offers.sql`
 - Create: `supabase/tests/database/test_listing_status_trigger.sql`
 
 This handles spec § 13 row 2: listing expires/sold mid-pending → auto-pass.
@@ -1977,7 +1977,7 @@ This handles spec § 13 row 2: listing expires/sold mid-pending → auto-pass.
 - [ ] **Step 1: Append trigger function**
 
 ```bash
-cat >> supabase/migrations/010_trade_offers.sql << 'EOF'
+cat >> supabase/migrations/015_trade_offers.sql << 'EOF'
 
 -- ============================================================
 -- Trigger: when a listing leaves 'active' for 'sold' or 'expired',
@@ -2083,7 +2083,7 @@ Expected: `NOTICE:  PASS: listing status trigger auto-pass`
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/010_trade_offers.sql supabase/tests/database/test_listing_status_trigger.sql
+git add supabase/migrations/015_trade_offers.sql supabase/tests/database/test_listing_status_trigger.sql
 git commit -m "feat(trade-offers): trigger auto-pass on listing status change"
 ```
 
@@ -2387,7 +2387,7 @@ Expected: `new_offer_cols=6, offer_items_table=1, pin_col=1`.
 ls supabase/migrations/
 ```
 
-Expected: shows `010_trade_offers.sql` alongside `001_*.sql` through `009_*.sql`.
+Expected: shows `015_trade_offers.sql` alongside `001_*.sql` through `014_*.sql`.
 
 - [ ] **Step 5: Final commit (if anything new)**
 
@@ -2404,7 +2404,7 @@ git status
 After this plan: the entire DB layer for Trade Offers is live, atomic, RLS-protected, and tested. No UI yet — that's Plan 2.
 
 **What's working:**
-- Migration `010_trade_offers.sql` applies cleanly via `supabase db reset`
+- Migration `015_trade_offers.sql` applies cleanly via `supabase db reset`
 - 6 stored functions atomically handle all offer state transitions
 - Listing status auto-flips to `in_trade` on accept and `sold` on completion
 - Auto-pass for listing-wide and item-overlap conflicts

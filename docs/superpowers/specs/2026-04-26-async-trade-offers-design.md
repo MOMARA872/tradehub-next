@@ -202,7 +202,7 @@ stateDiagram-v2
 
 ## 8. Database schema
 
-One migration: `010_trade_offers.sql`. Two table changes (`offers` extension, new `offer_items`), one helper trigger fn, five stored functions, RLS updates.
+One migration: `015_trade_offers.sql`. Two table changes (`offers` extension, new `offer_items`), one helper trigger fn, five stored functions, RLS updates.
 
 ### 8.1 — `offers` table changes
 
@@ -611,7 +611,7 @@ flowchart TD
 
 The implementation plan (next step — `writing-plans` skill) will sequence this. Rough order so the spec phase has a shape to it:
 
-1. Migration `010_trade_offers.sql` (schema + functions + RLS) — DB tests pass.
+1. Migration `015_trade_offers.sql` (schema + functions + RLS) — DB tests pass.
 2. Server actions in `lib/` calling the stored functions; error mapping.
 3. Shared `ItemPickerGrid` + `MakeOfferModal`.
 4. Listing page — `ActiveOffersPanel` + `PassListPanel`.
