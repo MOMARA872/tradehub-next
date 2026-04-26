@@ -9,12 +9,17 @@
 
 -- ============================================================
 -- Helper trigger function (re-usable)
+-- Attach to any table that has an `updated_at timestamptz` column.
+-- Pinned search_path = public matches the project pattern from migration 002.
 -- ============================================================
 
 create or replace function set_updated_at()
-returns trigger as $$
+returns trigger
+language plpgsql
+set search_path = public
+as $$
 begin
   new.updated_at := now();
   return new;
 end;
-$$ language plpgsql;
+$$;
