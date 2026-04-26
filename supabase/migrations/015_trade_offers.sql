@@ -128,3 +128,25 @@ alter table threads
   add column pinned_offer_id uuid references offers(id) on delete set null;
 
 create index idx_threads_pinned_offer on threads(pinned_offer_id);
+
+-- ============================================================
+-- notifications: add 7 trade-offer notification types
+-- Use "if exists" on the constraint drop to match migration 008's pattern
+-- and survive partial replays.
+-- ============================================================
+
+alter table notifications drop constraint if exists notifications_type_check;
+alter table notifications add constraint notifications_type_check
+  check (type in (
+    -- existing types (preserved)
+    'offer_received', 'offer_accepted', 'offer_declined', 'offer_countered',
+    'new_message_thread', 'new_message', 'review_received',
+    -- new trade-offer types
+    'trade_offer_received',
+    'trade_offer_countered',
+    'trade_offer_accepted',
+    'trade_offer_passed',
+    'trade_offer_auto_passed',
+    'trade_offer_withdrawn',
+    'trade_offer_completed'
+  ));
