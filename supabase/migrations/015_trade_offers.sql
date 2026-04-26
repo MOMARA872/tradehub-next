@@ -483,11 +483,11 @@ end;
 $$;
 
 -- ============================================================
--- accept_offer — adds listing-wide auto-pass
+-- accept_offer — listing-wide + item-overlap auto-pass
 -- Atomically: sets status, auto-passes other pending offers on this
--- listing, flips involved listings to 'in_trade', creates/reuses a
--- thread and pins the offer, notifies the buyer.
--- (Item-overlap auto-pass added in Task 16.)
+-- listing AND any other pending offers that share an item with the
+-- accepted offer, flips involved listings to 'in_trade', creates/reuses
+-- a thread and pins the offer, notifies the buyer.
 -- ============================================================
 
 create or replace function accept_offer(p_offer_id uuid)
@@ -536,6 +536,28 @@ begin
              'Listing already traded',
              'Your offer was auto-passed because the listing was traded.',
              '/listings/' || v_offer.listing_id
+      from offers where id = v_sibling;
+  end loop;
+
+  -- Item-overlap auto-pass: any other pending offer that includes one
+  -- of the items just committed in this accepted offer. Status filter
+  -- excludes siblings already auto_passed_listing above, so each sibling
+  -- is touched at most once.
+  for v_sibling in
+    select distinct o.id from offers o
+    join offer_items oi on oi.offer_id = o.id
+    where o.status = 'pending'
+      and o.id <> v_offer.id
+      and oi.listing_id in (
+        select listing_id from offer_items where offer_id = v_offer.id
+      )
+  loop
+    update offers set status = 'auto_passed_item_taken' where id = v_sibling;
+    insert into notifications (user_id, type, title, body, link)
+      select buyer_id, 'trade_offer_auto_passed',
+             'Item already traded',
+             'Your offer was auto-passed because an item was traded elsewhere.',
+             '/trades/' || v_sibling
       from offers where id = v_sibling;
   end loop;
 
