@@ -33,12 +33,22 @@ export LOCAL_DB="$(supabase status -o json | jq -r .DB_URL)"
 # or copy the "DB URL" line from `supabase status` manually
 ```
 
+You also need a Postgres client (`psql`) on PATH. The Supabase CLI does NOT install one. Recommended:
+```bash
+brew install libpq
+# libpq is keg-only; do NOT brew link --force (collides with the system libpq).
+# Instead, prepend its bin to PATH for this shell:
+export PATH="$(brew --prefix libpq)/bin:$PATH"
+psql --version   # should print e.g. psql (PostgreSQL) 18.x
+```
+For persistent use across new shells, add the `export PATH=...` line to your `~/.zshrc`. (Not required for this plan — each subagent's commands will inline the PATH export.)
+
 To re-apply migrations from scratch (used after every migration edit):
 ```bash
 supabase db reset    # drops local DB, re-runs ALL migrations in order
 ```
 
-To run a verification script:
+To run a verification script (every `psql ...` line in this plan assumes `psql` is on PATH per the setup above):
 ```bash
 psql "$LOCAL_DB" -f supabase/tests/database/test_<name>.sql
 # Exit code 0 = passed. Any "raise exception" = failed.
