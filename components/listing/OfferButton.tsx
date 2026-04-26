@@ -7,7 +7,7 @@ import { formatPrice } from "@/lib/helpers/format";
 import { createNotification } from "@/lib/helpers/notifications";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Crown, Check, Package } from "lucide-react";
+import { Crown, Check, Package, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogTrigger,
@@ -36,7 +36,7 @@ interface MyListing {
 
 export function OfferButton({ listing }: { listing: ListingSnippet }) {
   const supabase = createClient();
-  const { currentUser } = useAuth();
+  const { currentUser, loading: authLoading } = useAuth();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [offerAmount, setOfferAmount] = useState("");
   const [offerMessage, setOfferMessage] = useState("");
@@ -56,9 +56,9 @@ export function OfferButton({ listing }: { listing: ListingSnippet }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fetch user's own listings for trade offers (all users)
+  // Fetch user's own listings for trade offers (skip for owners — dialog never renders)
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!currentUserId || currentUserId === listing.user_id) return;
     setLoadingListings(true);
     supabase
       .from("listings")
@@ -230,7 +230,11 @@ export function OfferButton({ listing }: { listing: ListingSnippet }) {
             </div>
 
             {/* Cash offer — Pro only */}
-            {isPro ? (
+            {authLoading ? (
+              <div className="h-10 flex items-center justify-center">
+                <Loader2 className="h-4 w-4 animate-spin text-muted" />
+              </div>
+            ) : isPro ? (
               <div>
                 <label className="text-xs font-medium text-foreground block mb-1">
                   <span className="inline-flex items-center gap-1">
