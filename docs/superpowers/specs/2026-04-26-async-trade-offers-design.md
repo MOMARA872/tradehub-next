@@ -309,12 +309,12 @@ create trigger offer_items_cap before insert on offer_items
 
 ### 8.3 — `listings` status extension
 
-Add `'in_trade'` to the existing listings status check:
+Add `'in_trade'` to the existing listings status check. **Preserve `'paused'`** — migration 008 added it for Stripe billing (paused when a pro subscription lapses) and the Stripe webhook actively reads/writes it. The full set after this migration is `active | sold | expired | paused | in_trade`.
 
 ```sql
-alter table listings drop constraint listings_status_check;
+alter table listings drop constraint if exists listings_status_check;
 alter table listings add constraint listings_status_check
-  check (status in ('active', 'sold', 'expired', 'in_trade'));
+  check (status in ('active', 'sold', 'expired', 'paused', 'in_trade'));
 ```
 
 Listings flip to `'in_trade'` when an offer involving them is `accepted`. They flip to `'sold'` when both sides Mark Complete. (Or back to `'active'` if the trade is later cancelled — out of scope for MVP.)

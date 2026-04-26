@@ -454,11 +454,17 @@ cat >> supabase/migrations/015_trade_offers.sql << 'EOF'
 
 -- ============================================================
 -- listings: add 'in_trade' status (between accept and complete)
+-- IMPORTANT: 'paused' was added by migration 008 (Stripe billing —
+-- paused when a pro subscription lapses). It MUST be preserved here.
+-- The Stripe webhook in app/api/webhooks/stripe/route.ts reads/writes
+-- status='paused'.
+-- Use "if exists" on the drop to match migration 008's pattern and
+-- survive partial replays.
 -- ============================================================
 
-alter table listings drop constraint listings_status_check;
+alter table listings drop constraint if exists listings_status_check;
 alter table listings add constraint listings_status_check
-  check (status in ('active', 'sold', 'expired', 'in_trade'));
+  check (status in ('active', 'sold', 'expired', 'paused', 'in_trade'));
 EOF
 ```
 
