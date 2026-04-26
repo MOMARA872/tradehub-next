@@ -350,6 +350,12 @@ alter table notifications add constraint notifications_type_check
 
 ### 8.6 — RLS policies
 
+> **🔴 Pre-deploy blocker — MUST resolve in Plan 2 before applying this migration to any remote database.**
+>
+> Dropping `"Offer participants can update offers"` is intentional — the new design routes ALL status changes through SECURITY DEFINER stored functions. However, `app/(main)/offers/page.tsx` (`handleUpdateOffer()`, lines 102–114) currently performs a direct client UPDATE on the existing cash-offer Accept/Decline flow. After this migration runs against a live database, that flow breaks (RLS rejects the UPDATE).
+>
+> **Plan 2 must replace that direct UPDATE with a server action calling `accept_offer()` (for "accepted") or `pass_offer()` (for "declined") before this migration is deployed.** Local development is unaffected.
+
 ```sql
 -- Drop old participant-only read policy
 drop policy "Offer participants can read offers" on offers;

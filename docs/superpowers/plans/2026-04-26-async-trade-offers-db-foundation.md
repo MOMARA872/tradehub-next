@@ -2415,6 +2415,36 @@ git status
 
 ---
 
+## 🔴 Pre-deploy blocker (must resolve BEFORE any remote push or deploy)
+
+**Issue surfaced during Task 8 review.** Task 8 drops the existing `"Offer participants can update offers"` RLS policy and intentionally does NOT replace it — all `offers` UPDATEs are designed to flow through SECURITY DEFINER stored functions (Tasks 10–17).
+
+However, **`app/(main)/offers/page.tsx` still does a direct client UPDATE** at lines 102–114 inside `handleUpdateOffer()`:
+
+```ts
+const { error } = await supabase
+  .from("offers")
+  .update({ status: newStatus })   // ← needs UPDATE policy
+  .eq("id", offerId);
+```
+
+This is the existing cash-offer Accept/Decline flow. The dropped policy was permitting it. After Plan 1 ships and this migration is applied to a live database, that flow breaks immediately — listing owners clicking Accept/Decline see `toast.error("Failed to update offer")` and nothing changes.
+
+**Local development is NOT affected** — the breakage only manifests when the migration runs against a database that has the production Next.js app calling `.update()`.
+
+**Resolution (must happen in Plan 2, before deploying Plan 1's migration):**
+
+Replace the direct UPDATE in `app/(main)/offers/page.tsx` with a server action that calls the relevant stored function (`accept_offer()` for "accepted", `pass_offer()` for "declined"). The cash-offer flow then routes through the same SECURITY DEFINER security model as trade offers.
+
+Until that migration of the cash flow is done:
+- ❌ Do NOT push this branch to remote.
+- ❌ Do NOT apply migration `015_trade_offers.sql` to the staging or production Supabase project.
+- ❌ Do NOT merge to `main` if `main` is auto-deployed.
+
+This blocker is intentionally documented prominently here so it is impossible to miss during the deploy review.
+
+---
+
 ## Done — Plan 1 of 5 ships
 
 After this plan: the entire DB layer for Trade Offers is live, atomic, RLS-protected, and tested. No UI yet — that's Plan 2.
