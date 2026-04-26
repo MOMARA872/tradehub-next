@@ -2452,6 +2452,31 @@ This blocker is intentionally documented prominently here so it is impossible to
 
 ---
 
+## 🟡 Pre-deploy debt (track and resolve before remote push)
+
+These do not break local development but must be addressed before this migration runs against a live database.
+
+### Debt 1: `accept_offer()` notification batching not implemented
+
+Spec §8.7 requires: *"when `accept_offer()` auto-passes 3+ offers, batch into a single `trade_offer_auto_passed` notification per affected user with a count, not one per offer."*
+
+Current behavior (Tasks 14–16): the listing-wide auto-pass loop and the item-overlap auto-pass loop each `insert into notifications` once per sibling offer. A buyer with multiple pending offers on the same listing will receive multiple `trade_offer_auto_passed` rows.
+
+- **Severity:** Important. Not a correctness bug — every notification points to a real auto-pass — but it produces a noisy inbox in the rare multi-offer case.
+- **Resolution:** implement aggregation in a follow-up task (candidate: Task 16.5) before remote push. Likely shape: collect `(buyer_id, reason, listing_id)` tuples in a temp set during the loops; after both loops finish, emit one notification per `(buyer_id, reason)` group with a count in the body when count ≥ 3.
+- **Until resolved:** ❌ do not push this branch to remote, ❌ do not deploy the migration to staging or prod.
+
+### Debt 2: concurrent `accept_offer()` deadlock handling not surfaced to caller
+
+`accept_offer()` takes `for update` on the accepted offer's row, then updates sibling offers via the listing-wide loop. Two callers accepting *different* pending offers on the *same* listing each lock their own row first, then each tries to update the other's row inside the listing-wide loop → **classic two-row deadlock**.
+
+- **Severity:** Important. PostgreSQL's deadlock detector aborts one of the two transactions cleanly, so there is no data corruption — but the losing caller currently surfaces a raw `deadlock detected` SQL error to the UI.
+- **Resolution (server/UI layer, not the SQL function):** in the Next.js server action that calls `accept_offer()`, catch Postgres error code `40P01` and either (a) retry once after a small jitter, or (b) return a friendly "Another acceptance was processed first — please refresh" error. Do not retry blindly more than once.
+- **Stress-test before deploy:** add a parallel-accept scenario to the integration test pass (two concurrent `psql` sessions calling `accept_offer()` on different pending offers of the same listing) and confirm the loser gets `40P01` and the winner's transaction commits cleanly.
+- **Until resolved:** ❌ do not push this branch to remote, ❌ do not deploy the migration to staging or prod.
+
+---
+
 ## Done — Plan 1 of 5 ships
 
 After this plan: the entire DB layer for Trade Offers is live, atomic, RLS-protected, and tested. No UI yet — that's Plan 2.
