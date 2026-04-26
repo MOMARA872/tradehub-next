@@ -380,3 +380,104 @@ begin
           '/listings/' || v_listing_id || '/offers');
 end;
 $$;
+
+-- ============================================================
+-- counter_offer — receiver of a pending offer counters with a
+-- new bundle of items (still drawn from the original buyer's listings).
+-- ============================================================
+
+create or replace function counter_offer(
+  p_parent_offer_id uuid,
+  p_item_ids        uuid[],
+  p_message         text default ''
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_caller     uuid := auth.uid();
+  v_parent     offers%rowtype;
+  v_owner      uuid;
+  v_recipient  uuid;
+  v_new_id     uuid;
+  v_item_id    uuid;
+  v_pos        smallint := 0;
+begin
+  if v_caller is null then raise exception 'Authentication required'; end if;
+
+  if array_length(p_item_ids, 1) is null or array_length(p_item_ids, 1) < 1 then
+    raise exception 'Must include at least 1 item';
+  end if;
+  if array_length(p_item_ids, 1) > 5 then
+    raise exception 'Cannot include more than 5 items';
+  end if;
+  -- Reject duplicate item UUIDs early — same guard as create_trade_offer.
+  -- Without this, the offer_items composite PK (offer_id, listing_id)
+  -- would otherwise raise an opaque constraint error.
+  if array_length(p_item_ids, 1) <> (
+    select count(distinct id) from unnest(p_item_ids) as u(id)
+  )::int then
+    raise exception 'Duplicate items in offer';
+  end if;
+
+  select * into v_parent from offers where id = p_parent_offer_id for update;
+  if v_parent.id is null then raise exception 'Parent offer not found'; end if;
+  if v_parent.status <> 'pending' then
+    raise exception 'Parent is not pending (status=%)', v_parent.status;
+  end if;
+  if v_parent.offer_type <> 'trade' then
+    raise exception 'Can only counter trade offers';
+  end if;
+
+  -- Receiver of this pending offer = whoever is NOT the proposer.
+  -- For a chain: receiver alternates each link.
+  select user_id into v_owner from listings where id = v_parent.listing_id;
+  v_recipient := case
+    when v_parent.proposer_id = v_owner then v_parent.buyer_id
+    else v_owner
+  end;
+  if v_recipient <> v_caller then
+    raise exception 'Only the receiver can counter';
+  end if;
+
+  -- Items must belong to the original buyer (the non-owner side) and be active
+  foreach v_item_id in array p_item_ids loop
+    if not exists (
+      select 1 from listings
+      where id = v_item_id and user_id = v_parent.buyer_id and status = 'active'
+    ) then
+      raise exception 'Item % is not active or not owned by the buyer', v_item_id;
+    end if;
+  end loop;
+
+  -- Mark parent as countered
+  update offers set status = 'countered' where id = v_parent.id;
+
+  -- Insert the counter as a new pending offer
+  insert into offers (
+    listing_id, buyer_id, proposer_id, parent_offer_id,
+    offer_type, status, message, offer_amount
+  ) values (
+    v_parent.listing_id, v_parent.buyer_id, v_caller, v_parent.id,
+    'trade', 'pending', coalesce(p_message, ''), 0
+  ) returning id into v_new_id;
+
+  foreach v_item_id in array p_item_ids loop
+    insert into offer_items (offer_id, listing_id, position)
+    values (v_new_id, v_item_id, v_pos);
+    v_pos := v_pos + 1;
+  end loop;
+
+  -- Notify the other party (= original proposer of parent)
+  insert into notifications (user_id, type, title, body, link)
+  values (v_parent.proposer_id, 'trade_offer_countered',
+          'Counter offer',
+          'You received a counter offer with ' ||
+            array_length(p_item_ids, 1) || ' item(s).',
+          '/trades/' || v_new_id);
+
+  return v_new_id;
+end;
+$$;
