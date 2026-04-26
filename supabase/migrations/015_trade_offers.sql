@@ -483,10 +483,11 @@ end;
 $$;
 
 -- ============================================================
--- accept_offer — listing owner accepts a pending offer.
--- Atomically: sets status, flips involved listings to 'in_trade',
--- creates/reuses a thread and pins the offer, notifies the buyer.
--- (Listing-wide and item-overlap auto-pass added in Tasks 15-16.)
+-- accept_offer — adds listing-wide auto-pass
+-- Atomically: sets status, auto-passes other pending offers on this
+-- listing, flips involved listings to 'in_trade', creates/reuses a
+-- thread and pins the offer, notifies the buyer.
+-- (Item-overlap auto-pass added in Task 16.)
 -- ============================================================
 
 create or replace function accept_offer(p_offer_id uuid)
@@ -500,6 +501,7 @@ declare
   v_offer      offers%rowtype;
   v_owner      uuid;
   v_thread_id  uuid;
+  v_sibling    uuid;
 begin
   if v_caller is null then raise exception 'Authentication required'; end if;
 
@@ -518,8 +520,24 @@ begin
     raise exception 'Only the listing owner can accept';
   end if;
 
-  -- Set this offer accepted
   update offers set status = 'accepted' where id = v_offer.id;
+
+  -- Listing-wide auto-pass: every other pending offer on this listing
+  -- (covers both cash and trade offers).
+  for v_sibling in
+    select id from offers
+    where listing_id = v_offer.listing_id
+      and id <> v_offer.id
+      and status = 'pending'
+  loop
+    update offers set status = 'auto_passed_listing' where id = v_sibling;
+    insert into notifications (user_id, type, title, body, link)
+      select buyer_id, 'trade_offer_auto_passed',
+             'Listing already traded',
+             'Your offer was auto-passed because the listing was traded.',
+             '/listings/' || v_offer.listing_id
+      from offers where id = v_sibling;
+  end loop;
 
   -- Flip the seller's listing + all offered items to 'in_trade'
   update listings set status = 'in_trade' where id = v_offer.listing_id;
