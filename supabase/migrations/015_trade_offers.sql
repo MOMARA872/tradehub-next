@@ -28,8 +28,9 @@ $$;
 -- offers table extensions
 -- ============================================================
 
--- Drop old declined-only check; we'll add a richer one below
-alter table offers drop constraint offers_status_check;
+-- Drop old declined-only check; we'll add a richer one below.
+-- Use "if exists" to match migration 008's pattern and survive partial replays.
+alter table offers drop constraint if exists offers_status_check;
 
 -- Migrate existing 'declined' rows to 'passed' (no-rejection policy)
 update offers set status = 'passed' where status = 'declined';
