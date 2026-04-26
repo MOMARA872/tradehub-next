@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatPrice } from "@/lib/helpers/format";
 import { createNotification } from "@/lib/helpers/notifications";
@@ -36,8 +37,9 @@ interface MyListing {
 
 export function OfferButton({ listing }: { listing: ListingSnippet }) {
   const supabase = createClient();
+  const router = useRouter();
   const { currentUser, loading: authLoading } = useAuth();
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const currentUserId = currentUser?.id ?? null;
   const [offerAmount, setOfferAmount] = useState("");
   const [offerMessage, setOfferMessage] = useState("");
   const [myListings, setMyListings] = useState<MyListing[]>([]);
@@ -48,13 +50,6 @@ export function OfferButton({ listing }: { listing: ListingSnippet }) {
     currentUser?.tier === "pro" &&
     (currentUser?.subscriptionStatus === "active" ||
       currentUser?.subscriptionStatus === "trialing");
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setCurrentUserId(user?.id ?? null);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Fetch user's own listings for trade offers (skip for owners — dialog never renders)
   useEffect(() => {
@@ -73,6 +68,14 @@ export function OfferButton({ listing }: { listing: ListingSnippet }) {
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId]);
+
+  if (authLoading) {
+    return (
+      <div className="w-full flex items-center justify-center bg-surface2 py-2.5 rounded-lg mb-3">
+        <Loader2 className="h-4 w-4 animate-spin text-muted" />
+      </div>
+    );
+  }
 
   const isOwner = currentUserId === listing.user_id;
 
@@ -140,7 +143,10 @@ export function OfferButton({ listing }: { listing: ListingSnippet }) {
     });
 
     toast.success("Offer sent!");
-    window.location.reload();
+    setOfferAmount("");
+    setOfferMessage("");
+    setSelectedItems(new Set());
+    router.refresh();
   }
 
   const canSubmit =
@@ -230,11 +236,7 @@ export function OfferButton({ listing }: { listing: ListingSnippet }) {
             </div>
 
             {/* Cash offer — Pro only */}
-            {authLoading ? (
-              <div className="h-10 flex items-center justify-center">
-                <Loader2 className="h-4 w-4 animate-spin text-muted" />
-              </div>
-            ) : isPro ? (
+            {isPro ? (
               <div>
                 <label className="text-xs font-medium text-foreground block mb-1">
                   <span className="inline-flex items-center gap-1">
