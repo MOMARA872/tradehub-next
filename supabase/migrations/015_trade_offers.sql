@@ -7,3 +7,14 @@
 -- threads.pinned_offer_id, notification types, RLS, and 6 stored
 -- functions for atomic state transitions.
 
+-- ============================================================
+-- Helper trigger function (re-usable)
+-- ============================================================
+
+create or replace function set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$ language plpgsql;
