@@ -48,6 +48,9 @@ begin
   end;
 
   -- 6 items must fail
+  -- Note: fixture only has 2 unique items owned by Bob, so we use repetition
+  -- to produce an array of length 6. The array_length check fires before the
+  -- duplicate-UUID check (validation order is auth → length → duplicates).
   perform set_config('request.jwt.claim.sub', v_bob::text, true);
   begin
     perform create_trade_offer(v_camera,
@@ -56,6 +59,16 @@ begin
   exception when others then
     if sqlerrm not like '%more than 5%' and sqlerrm not like '%5 items%' then
       raise exception 'wrong error: %', sqlerrm;
+    end if;
+  end;
+
+  -- Duplicate items must fail with a meaningful error (not an opaque PK error)
+  begin
+    perform create_trade_offer(v_camera, array[v_bike, v_bike], '');
+    raise exception 'TEST FAILED: duplicate items were allowed';
+  exception when others then
+    if sqlerrm not like '%uplicate items%' then
+      raise exception 'wrong error for duplicates: %', sqlerrm;
     end if;
   end;
 

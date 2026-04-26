@@ -235,6 +235,13 @@ begin
   if array_length(p_item_ids, 1) > 5 then
     raise exception 'Cannot include more than 5 items';
   end if;
+  -- Reject duplicate item UUIDs early — the offer_items composite PK
+  -- (offer_id, listing_id) would otherwise raise an opaque constraint error.
+  if array_length(p_item_ids, 1) <> (
+    select count(distinct id) from unnest(p_item_ids) as u(id)
+  )::int then
+    raise exception 'Duplicate items in offer';
+  end if;
 
   -- Validate target listing
   select user_id into v_owner from listings
