@@ -106,3 +106,13 @@ $$;
 
 create trigger offer_items_cap before insert on offer_items
   for each row execute function enforce_offer_item_cap();
+
+-- ============================================================
+-- listings: add 'in_trade' status (between accept and complete)
+-- Use "if exists" on the constraint drop to match migration 008's pattern
+-- and survive partial replays.
+-- ============================================================
+
+alter table listings drop constraint if exists listings_status_check;
+alter table listings add constraint listings_status_check
+  check (status in ('active', 'sold', 'expired', 'in_trade'));
