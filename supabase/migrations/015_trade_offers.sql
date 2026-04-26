@@ -510,6 +510,10 @@ begin
   end if;
 
   select user_id into v_owner from listings where id = v_offer.listing_id;
+  -- Defensive: a NULL v_owner would make `v_owner <> v_caller` evaluate to NULL
+  -- (three-valued logic) which is falsy in IF — silently bypassing the
+  -- ownership check. FK cascade should make this unreachable, but guard anyway.
+  if v_owner is null then raise exception 'Listing not found'; end if;
   if v_owner <> v_caller then
     raise exception 'Only the listing owner can accept';
   end if;
@@ -522,13 +526,16 @@ begin
   update listings set status = 'in_trade'
     where id in (select listing_id from offer_items where offer_id = v_offer.id);
 
-  -- Create or reuse a thread between owner and buyer for this listing
+  -- Create or reuse a thread between owner and buyer for this listing.
+  -- On conflict, refresh both pinned_offer_id and listing_title so a thread
+  -- created against an old listing title shows the current one.
   insert into threads (listing_id, buyer_id, seller_id, listing_title, pinned_offer_id)
     values (v_offer.listing_id, v_offer.buyer_id, v_owner,
             (select title from listings where id = v_offer.listing_id),
             v_offer.id)
     on conflict (listing_id, buyer_id) do update
-      set pinned_offer_id = excluded.pinned_offer_id
+      set pinned_offer_id = excluded.pinned_offer_id,
+          listing_title   = excluded.listing_title
     returning id into v_thread_id;
 
   -- Notify buyer
