@@ -25,7 +25,7 @@ export const LISTING_ANALYTICS: ListingAnalytics[] = [
     views: [20, 35, 42, 38, 30, 25, 18, 28, 40, 45, 32, 22, 15, 12],
     uniqueVisitors: [14, 25, 30, 28, 22, 18, 12, 20, 30, 34, 24, 16, 10, 8],
     saves: 22, shares: 11, offerRate: 12.3, avgTimeOnPage: 55,
-    topReferrers: ['Search', 'Browse', 'Community Board', 'SMS Alert'],
+    topReferrers: ['Search', 'Browse', 'SMS Alert'],
     demographics: { mobile: 55, desktop: 45 },
   },
   {
@@ -41,7 +41,7 @@ export const LISTING_ANALYTICS: ListingAnalytics[] = [
     views: [8, 15, 22, 34, 41, 38, 29, 33, 45, 52, 48, 36, 27, 19],
     uniqueVisitors: [5, 10, 16, 24, 30, 28, 20, 24, 33, 40, 35, 26, 19, 13],
     saves: 18, shares: 9, offerRate: 11.4, avgTimeOnPage: 47,
-    topReferrers: ['Search', 'Browse', 'Direct Link', 'Community Board'],
+    topReferrers: ['Search', 'Browse', 'Direct Link'],
     demographics: { mobile: 58, desktop: 42 },
   },
   {
@@ -65,7 +65,7 @@ export const LISTING_ANALYTICS: ListingAnalytics[] = [
     views: [10, 20, 30, 42, 38, 28, 22, 35, 44, 55, 42, 30, 24, 16],
     uniqueVisitors: [7, 14, 22, 30, 28, 20, 15, 25, 32, 42, 30, 22, 17, 11],
     saves: 24, shares: 12, offerRate: 10.6, avgTimeOnPage: 51,
-    topReferrers: ['Search', 'Community Board', 'Browse', 'SMS Alert'],
+    topReferrers: ['Search', 'Browse', 'SMS Alert'],
     demographics: { mobile: 54, desktop: 46 },
   },
 ];

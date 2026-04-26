@@ -65,7 +65,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Add cache headers for public, read-heavy routes
-  const publicCachePaths = ["/browse", "/search", "/listing/", "/community", "/premium"];
+  const publicCachePaths = ["/browse", "/search", "/listing/", "/premium"];
   const isPublicCacheable = publicCachePaths.some((p) =>
     request.nextUrl.pathname.startsWith(p)
   );

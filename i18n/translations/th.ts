@@ -8,7 +8,6 @@ export const th: TranslationKeys = {
     dashboard: "แดชบอร์ด",
     messages: "ข้อความ",
     map: "แผนที่",
-    community: "ชุมชน",
     more: "เพิ่มเติม",
     login: "เข้าสู่ระบบ",
     signup: "สมัครสมาชิก",

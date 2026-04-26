@@ -8,7 +8,6 @@ export const ar: TranslationKeys = {
     dashboard: "لوحة التحكم",
     messages: "الرسائل",
     map: "الخريطة",
-    community: "المجتمع",
     more: "المزيد",
     login: "تسجيل الدخول",
     signup: "إنشاء حساب",

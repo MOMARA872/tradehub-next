@@ -6,7 +6,6 @@ export const en = {
     dashboard: "Dashboard",
     messages: "Messages",
     map: "Map",
-    community: "Community",
     more: "More",
     login: "Login",
     signup: "Sign Up",

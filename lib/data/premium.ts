@@ -21,7 +21,7 @@ export interface UserSubscription {
 export const PREMIUM_PLANS: PremiumPlan[] = [
   {
     id: 'free', name: 'Free', price: 0, period: 'forever', icon: 'CircleDot', color: 'var(--text3)',
-    features: ['5 active listings', 'Basic search', 'Standard profile', 'Community board access', 'Trade chain (Personal mode)'],
+    features: ['5 active listings', 'Basic search', 'Standard profile', 'Trade chain (Personal mode)'],
     limits: { maxListings: 5, boostCredits: 0, analyticsAccess: false, prioritySupport: false, verifiedBadge: false },
   },
   {

@@ -63,15 +63,6 @@ export const CATEGORIES: Category[] = [
     subcategories: ['Events', 'Concerts', 'Tickets', 'Classes'],
   },
   {
-    id: 'community',
-    name: 'Community',
-    slug: 'community',
-    icon: 'Users',
-    description: 'Connect with your neighbors and local groups',
-    isHot: false,
-    subcategories: ['Announcements', 'Groups', 'Discussions'],
-  },
-  {
     id: 'ads',
     name: 'Ads',
     slug: 'ads',

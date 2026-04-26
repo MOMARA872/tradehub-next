@@ -8,7 +8,6 @@ export const es: TranslationKeys = {
     dashboard: "Panel",
     messages: "Mensajes",
     map: "Mapa",
-    community: "Comunidad",
     more: "Más",
     login: "Iniciar Sesión",
     signup: "Registrarse",
