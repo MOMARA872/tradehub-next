@@ -297,7 +297,7 @@ export default function ProfilePage() {
               : "text-muted hover:text-foreground"
           }`}
         >
-          Community ({communityPosts.length})
+          Posts ({communityPosts.length})
           {activeTab === "community" && (
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />
           )}
@@ -572,7 +572,7 @@ function CommunityTab({
 
       {/* Posts List */}
       {posts.length === 0 ? (
-        <EmptyState message="No community posts yet" icon="MessageCircle" />
+        <EmptyState message="No posts yet" icon="MessageCircle" />
       ) : (
         posts.map((post) => (
           <div

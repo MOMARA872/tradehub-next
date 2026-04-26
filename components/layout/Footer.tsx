@@ -29,7 +29,6 @@ const footerSections = [
       { label: "Map View", href: "/map-view" },
       { label: "Trade Chains", href: "/discover-chains" },
       { label: "Boost Listing", href: "/boost" },
-      { label: "Community", href: "/community" },
     ],
   },
   {

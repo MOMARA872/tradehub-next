@@ -55,7 +55,6 @@ export function Navbar() {
     { id: "/", label: t("nav.home"), href: "/" },
     { id: "/browse", label: t("nav.browse"), href: "/browse" },
     { id: "/map-view", label: t("nav.map"), href: "/map-view" },
-    { id: "/community", label: t("nav.community"), href: "/community" },
   ];
 
   const userPages = [
