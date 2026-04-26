@@ -202,3 +202,85 @@ create policy "Proposer can add items to own pending offer"
       where id = offer_id and proposer_id = auth.uid() and status = 'pending'
     )
   );
+
+-- ============================================================
+-- create_trade_offer
+-- Caller: authenticated user (the buyer/proposer)
+-- ============================================================
+
+create or replace function create_trade_offer(
+  p_listing_id uuid,
+  p_item_ids   uuid[],
+  p_message    text default ''
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_proposer uuid := auth.uid();
+  v_owner    uuid;
+  v_offer_id uuid;
+  v_item_id  uuid;
+  v_pos      smallint := 0;
+begin
+  if v_proposer is null then
+    raise exception 'Authentication required';
+  end if;
+
+  if array_length(p_item_ids, 1) is null or array_length(p_item_ids, 1) < 1 then
+    raise exception 'Must include at least 1 item';
+  end if;
+  if array_length(p_item_ids, 1) > 5 then
+    raise exception 'Cannot include more than 5 items';
+  end if;
+
+  -- Validate target listing
+  select user_id into v_owner from listings
+    where id = p_listing_id and status = 'active'
+    for update;
+  if v_owner is null then
+    raise exception 'Listing not found or not active';
+  end if;
+  if v_owner = v_proposer then
+    raise exception 'Cannot make offer on your own listing';
+  end if;
+
+  -- Validate each offered item
+  foreach v_item_id in array p_item_ids loop
+    if not exists (
+      select 1 from listings
+      where id = v_item_id and user_id = v_proposer and status = 'active'
+    ) then
+      raise exception 'Item % is not yours or not active', v_item_id;
+    end if;
+  end loop;
+
+  -- Insert offer
+  insert into offers (
+    listing_id, buyer_id, proposer_id, offer_type, status, message, offer_amount
+  ) values (
+    p_listing_id, v_proposer, v_proposer, 'trade', 'pending',
+    coalesce(p_message, ''), 0
+  ) returning id into v_offer_id;
+
+  -- Insert items
+  foreach v_item_id in array p_item_ids loop
+    insert into offer_items (offer_id, listing_id, position)
+    values (v_offer_id, v_item_id, v_pos);
+    v_pos := v_pos + 1;
+  end loop;
+
+  -- Notify the listing owner
+  insert into notifications (user_id, type, title, body, link)
+  values (
+    v_owner, 'trade_offer_received',
+    'New trade offer',
+    'You have a new trade offer with ' || array_length(p_item_ids, 1) || ' item(s).',
+    '/listings/' || p_listing_id || '/offers'
+  );
+
+  return v_offer_id;
+end;
+$$;
