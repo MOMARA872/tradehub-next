@@ -346,13 +346,16 @@ as $$
 declare
   v_caller     uuid := auth.uid();
   v_proposer   uuid;
+  v_buyer      uuid;
   v_status     text;
   v_listing_id uuid;
   v_owner      uuid;
+  v_recipient  uuid;
 begin
   if v_caller is null then raise exception 'Authentication required'; end if;
 
-  select proposer_id, status, listing_id into v_proposer, v_status, v_listing_id
+  select proposer_id, buyer_id, status, listing_id
+    into v_proposer, v_buyer, v_status, v_listing_id
     from offers where id = p_offer_id for update;
   if v_status is null then raise exception 'Offer not found'; end if;
   if v_status <> 'pending' then
@@ -364,12 +367,16 @@ begin
 
   update offers set status = 'withdrawn' where id = p_offer_id;
 
-  -- Notify the recipient (the listing owner of the parent listing)
+  -- Notify the OTHER party (not the withdrawer). For an original buyer offer
+  -- the recipient is the listing owner. For a seller-sent counter, the
+  -- recipient is the original buyer — avoids self-notification to the seller.
   select user_id into v_owner from listings where id = v_listing_id;
+  v_recipient := case when v_caller = v_owner then v_buyer else v_owner end;
+
   insert into notifications (user_id, type, title, body, link)
-  values (v_owner, 'trade_offer_withdrawn',
+  values (v_recipient, 'trade_offer_withdrawn',
           'Offer withdrawn',
-          'A pending offer on your listing was withdrawn.',
+          'A pending offer was withdrawn.',
           '/listings/' || v_listing_id || '/offers');
 end;
 $$;
