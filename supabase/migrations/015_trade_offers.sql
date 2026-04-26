@@ -119,3 +119,12 @@ create trigger offer_items_cap before insert on offer_items
 alter table listings drop constraint if exists listings_status_check;
 alter table listings add constraint listings_status_check
   check (status in ('active', 'sold', 'expired', 'paused', 'in_trade'));
+
+-- ============================================================
+-- threads: pin an offer to a thread (for accepted trades)
+-- ============================================================
+
+alter table threads
+  add column pinned_offer_id uuid references offers(id) on delete set null;
+
+create index idx_threads_pinned_offer on threads(pinned_offer_id);
