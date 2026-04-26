@@ -88,16 +88,21 @@ create table offer_items (
 
 create index idx_offer_items_listing on offer_items(listing_id);
 
--- Cap of 5 items per offer
+-- Cap of 5 items per offer.
+-- Pinned search_path = public for consistency with set_updated_at and the
+-- project pattern from migration 002.
 create or replace function enforce_offer_item_cap()
-returns trigger as $$
+returns trigger
+language plpgsql
+set search_path = public
+as $$
 begin
   if (select count(*) from offer_items where offer_id = new.offer_id) >= 5 then
     raise exception 'Trade offer cannot include more than 5 items';
   end if;
   return new;
 end;
-$$ language plpgsql;
+$$;
 
 create trigger offer_items_cap before insert on offer_items
   for each row execute function enforce_offer_item_cap();
