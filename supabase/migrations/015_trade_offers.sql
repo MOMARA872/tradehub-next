@@ -291,3 +291,44 @@ begin
   return v_offer_id;
 end;
 $$;
+
+-- ============================================================
+-- pass_offer — listing owner passes on an offer
+-- ============================================================
+
+create or replace function pass_offer(p_offer_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_caller     uuid := auth.uid();
+  v_listing_id uuid;
+  v_owner      uuid;
+  v_buyer      uuid;
+  v_status     text;
+begin
+  if v_caller is null then raise exception 'Authentication required'; end if;
+
+  select listing_id, buyer_id, status into v_listing_id, v_buyer, v_status
+    from offers where id = p_offer_id for update;
+  if v_status is null then raise exception 'Offer not found'; end if;
+  if v_status <> 'pending' then
+    raise exception 'Offer is not pending (status=%)', v_status;
+  end if;
+
+  select user_id into v_owner from listings where id = v_listing_id;
+  if v_owner <> v_caller then
+    raise exception 'Only the listing owner can pass';
+  end if;
+
+  update offers set status = 'passed' where id = p_offer_id;
+
+  insert into notifications (user_id, type, title, body, link)
+  values (v_buyer, 'trade_offer_passed',
+          'Offer passed',
+          'The seller passed on your offer.',
+          '/listings/' || v_listing_id || '#pass-list');
+end;
+$$;
