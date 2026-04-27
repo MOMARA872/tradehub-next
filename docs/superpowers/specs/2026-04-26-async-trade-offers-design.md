@@ -202,7 +202,7 @@ stateDiagram-v2
 
 ## 8. Database schema
 
-One migration: `010_trade_offers.sql`. Two table changes (`offers` extension, new `offer_items`), one helper trigger fn, five stored functions, RLS updates.
+One migration: `015_trade_offers.sql`. Two table changes (`offers` extension, new `offer_items`), one helper trigger fn, five stored functions, RLS updates.
 
 ### 8.1 — `offers` table changes
 
@@ -309,12 +309,12 @@ create trigger offer_items_cap before insert on offer_items
 
 ### 8.3 — `listings` status extension
 
-Add `'in_trade'` to the existing listings status check:
+Add `'in_trade'` to the existing listings status check. **Preserve `'paused'`** — migration 008 added it for Stripe billing (paused when a pro subscription lapses) and the Stripe webhook actively reads/writes it. The full set after this migration is `active | sold | expired | paused | in_trade`.
 
 ```sql
-alter table listings drop constraint listings_status_check;
+alter table listings drop constraint if exists listings_status_check;
 alter table listings add constraint listings_status_check
-  check (status in ('active', 'sold', 'expired', 'in_trade'));
+  check (status in ('active', 'sold', 'expired', 'paused', 'in_trade'));
 ```
 
 Listings flip to `'in_trade'` when an offer involving them is `accepted`. They flip to `'sold'` when both sides Mark Complete. (Or back to `'active'` if the trade is later cancelled — out of scope for MVP.)
@@ -349,6 +349,12 @@ alter table notifications add constraint notifications_type_check
 ```
 
 ### 8.6 — RLS policies
+
+> **🔴 Pre-deploy blocker — MUST resolve in Plan 2 before applying this migration to any remote database.**
+>
+> Dropping `"Offer participants can update offers"` is intentional — the new design routes ALL status changes through SECURITY DEFINER stored functions. However, `app/(main)/offers/page.tsx` (`handleUpdateOffer()`, lines 102–114) currently performs a direct client UPDATE on the existing cash-offer Accept/Decline flow. After this migration runs against a live database, that flow breaks (RLS rejects the UPDATE).
+>
+> **Plan 2 must replace that direct UPDATE with a server action calling `accept_offer()` (for "accepted") or `pass_offer()` (for "declined") before this migration is deployed.** Local development is unaffected.
 
 ```sql
 -- Drop old participant-only read policy
@@ -406,7 +412,7 @@ All five are `security definer` so they bypass RLS to run multi-row updates atom
 | `accept_offer(offer_id uuid)` | Listing owner only | Locks the offer row (`for update`); validates status=`pending`. Sets this offer `accepted`. Sets all sibling pending offers on this listing → `auto_passed_listing`. For each item in this offer, finds proposer's other pending offers containing the same item and sets them → `auto_passed_item_taken`. Flips involved listings to `'in_trade'`. Calls internal `_create_or_reuse_thread()` to populate `pinned_offer_id`. Fires notifications. |
 | `counter_offer(parent_offer_id uuid, item_ids uuid[], message text)` | Receiver of the parent offer | Validates: parent status=`pending`, caller is the receiver, items belong to the *original buyer* and are `active`, 1–5 cap. Sets parent → `countered`. Inserts new offer row with `parent_offer_id`, `proposer_id=caller`, status=`pending`. Inserts offer_items. Fires `trade_offer_countered` notification to other party. Returns new offer_id. |
 | `pass_offer(offer_id uuid)` | Listing owner only | Validates status=`pending`. Sets status=`passed`. Fires `trade_offer_passed` notification to buyer. |
-| `withdraw_offer(offer_id uuid)` | Proposer of this offer | Validates status=`pending`. Sets status=`withdrawn`. Fires `trade_offer_withdrawn` notification to listing owner. |
+| `withdraw_offer(offer_id uuid)` | Proposer of this offer | Validates status=`pending`. Sets status=`withdrawn`. Fires `trade_offer_withdrawn` notification to **the other party** — listing owner if the proposer is the buyer (the original offer case), or the buyer if the proposer is the listing owner (a seller-sent counter). Avoids self-notification in counter chains. |
 | `mark_offer_complete(offer_id uuid)` | Either participant | Validates status=`accepted`. Sets the appropriate `completed_by_*` flag based on caller. If both flags now true: status=`completed`, flips all involved listings from `'in_trade'` to `'sold'`, fires `trade_offer_completed` notification to both. |
 
 **Race condition protection:** `accept_offer()` opens with `select … from offers where id = $1 for update`. Concurrent accepts on overlapping items serialize; the second loses and returns a friendly error.
@@ -499,7 +505,7 @@ Reuses the existing `notifications` table (see 8.5). Real-time delivery already 
 | `trade_offer_accepted` | Buyer | `accept_offer()` | `/threads/:thread_id` |
 | `trade_offer_passed` | Buyer | `pass_offer()` | `/listings/:listing_id` (with Pass List anchor) |
 | `trade_offer_auto_passed` | Buyer | trigger / batch | `/trades/:offer_id` (with reason badge) |
-| `trade_offer_withdrawn` | Listing owner | `withdraw_offer()` | `/listings/:listing_id/offers` |
+| `trade_offer_withdrawn` | The other party (listing owner if the withdrawer is the buyer; buyer if the withdrawer is the seller of a counter) | `withdraw_offer()` | `/listings/:listing_id/offers` |
 | `trade_offer_completed` | Both | both Mark Complete | `/reviews/new?trade=:offer_id` |
 
 **Rules:**
@@ -611,7 +617,7 @@ flowchart TD
 
 The implementation plan (next step — `writing-plans` skill) will sequence this. Rough order so the spec phase has a shape to it:
 
-1. Migration `010_trade_offers.sql` (schema + functions + RLS) — DB tests pass.
+1. Migration `015_trade_offers.sql` (schema + functions + RLS) — DB tests pass.
 2. Server actions in `lib/` calling the stored functions; error mapping.
 3. Shared `ItemPickerGrid` + `MakeOfferModal`.
 4. Listing page — `ActiveOffersPanel` + `PassListPanel`.

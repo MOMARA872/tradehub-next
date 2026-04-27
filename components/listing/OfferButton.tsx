@@ -115,6 +115,8 @@ export function OfferButton({ listing }: { listing: ListingSnippet }) {
     const { error } = await supabase.from("offers").insert({
       listing_id: listing.id,
       buyer_id: currentUserId,
+      proposer_id: currentUserId,
+      offer_type: tradeItems.length > 0 ? "trade" : "cash",
       offer_amount: cashAmount,
       trade_description: tradeDescription,
       message: offerMessage,

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { createClient } from "@/lib/supabase/client";
-import { createNotification } from "@/lib/helpers/notifications";
+import { acceptOfferAction, passOfferAction } from "./actions";
 import { dbProfileToUser } from "@/lib/types";
 import type { User } from "@/lib/types";
 import { UserAvatar } from "@/components/user/UserAvatar";
@@ -99,30 +99,22 @@ export default function OffersPage() {
     return () => clearInterval(interval);
   }, [currentUser, loadOffers]);
 
-  async function handleUpdateOffer(offerId: string, newStatus: "accepted" | "declined", offer: OfferRow) {
+  async function handleUpdateOffer(offerId: string, newStatus: "accepted" | "declined") {
     setUpdatingId(offerId);
-    const { error } = await supabase
-      .from("offers")
-      .update({ status: newStatus })
-      .eq("id", offerId);
 
-    if (error) {
+    // Routes through SECURITY DEFINER RPCs (migration 015 dropped the
+    // participant UPDATE policy on offers). The RPCs fire their own
+    // trade_offer_accepted / trade_offer_passed notifications, so no
+    // manual createNotification call is needed here.
+    const result = newStatus === "accepted"
+      ? await acceptOfferAction(offerId)
+      : await passOfferAction(offerId);
+
+    if (!result.ok) {
       toast.error("Failed to update offer");
       setUpdatingId(null);
       return;
     }
-
-    // Notify the buyer
-    const listing = offer.listings;
-    await createNotification({
-      supabase,
-      userId: offer.buyer_id,
-      type: newStatus === "accepted" ? "offer_accepted" : "offer_declined",
-      icon: newStatus === "accepted" ? "check" : "x",
-      title: `Offer ${newStatus}`,
-      body: listing ? `Your offer on "${listing.title}" was ${newStatus}` : `Your offer was ${newStatus}`,
-      link: "/offers",
-    });
 
     toast.success(`Offer ${newStatus}`);
     setUpdatingId(null);
@@ -280,7 +272,7 @@ export default function OffersPage() {
                     {activeTab === "received" && offer.status === "pending" && (
                       <div className="flex gap-2 mt-3">
                         <button
-                          onClick={() => handleUpdateOffer(offer.id, "accepted", offer)}
+                          onClick={() => handleUpdateOffer(offer.id, "accepted")}
                           disabled={updatingId === offer.id}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-xs font-semibold rounded-lg hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
                         >
@@ -292,7 +284,7 @@ export default function OffersPage() {
                           Accept
                         </button>
                         <button
-                          onClick={() => handleUpdateOffer(offer.id, "declined", offer)}
+                          onClick={() => handleUpdateOffer(offer.id, "declined")}
                           disabled={updatingId === offer.id}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 text-red-400 text-xs font-semibold rounded-lg hover:bg-red-500/20 transition-colors disabled:opacity-50"
                         >
