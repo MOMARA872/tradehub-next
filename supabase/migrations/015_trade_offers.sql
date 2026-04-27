@@ -654,3 +654,64 @@ begin
   end if;
 end;
 $$;
+
+-- ============================================================
+-- Trigger: when a listing leaves its current status for 'sold' or
+-- 'expired', auto-pass pending offers that involve it (either as the
+-- offered listing or as one of the offered items).
+--
+-- security definer + search_path=public so this works when fired by a
+-- regular user updating their own listing — the RLS UPDATE policy on
+-- offers was intentionally dropped in Task 8, so without these, a
+-- seller-initiated 'expired' flip would be silently blocked from
+-- auto-passing other users' pending offers.
+-- ============================================================
+
+create or replace function listing_status_auto_pass()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_offer_id uuid;
+begin
+  if new.status not in ('sold', 'expired') then return new; end if;
+  if old.status = new.status then return new; end if;
+
+  -- Pending offers ON this listing
+  for v_offer_id in
+    select id from offers where listing_id = new.id and status = 'pending'
+  loop
+    update offers set status = 'auto_passed_listing' where id = v_offer_id;
+    insert into notifications (user_id, type, title, body, link)
+      select buyer_id, 'trade_offer_auto_passed',
+             'Listing no longer available',
+             'Your offer was auto-passed because the listing is no longer active.',
+             '/listings/' || new.id
+      from offers where id = v_offer_id;
+  end loop;
+
+  -- Pending offers that include this listing as an item
+  for v_offer_id in
+    select distinct o.id from offers o
+    join offer_items oi on oi.offer_id = o.id
+    where oi.listing_id = new.id and o.status = 'pending'
+  loop
+    update offers set status = 'auto_passed_item_taken' where id = v_offer_id;
+    insert into notifications (user_id, type, title, body, link)
+      select buyer_id, 'trade_offer_auto_passed',
+             'Offered item no longer available',
+             'Your offer was auto-passed because an offered item is no longer active.',
+             '/trades/' || v_offer_id
+      from offers where id = v_offer_id;
+  end loop;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists listings_status_auto_pass on listings;
+create trigger listings_status_auto_pass
+  after update of status on listings
+  for each row execute function listing_status_auto_pass();
