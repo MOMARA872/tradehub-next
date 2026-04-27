@@ -586,3 +586,71 @@ begin
           '/threads/' || v_thread_id);
 end;
 $$;
+
+-- ============================================================
+-- mark_offer_complete — both-sides handshake.
+-- Buyer or seller calls; second caller flips status to completed
+-- and the involved listings flip from in_trade to sold.
+-- ============================================================
+
+create or replace function mark_offer_complete(p_offer_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_caller    uuid := auth.uid();
+  v_offer     offers%rowtype;
+  v_owner     uuid;
+  v_is_buyer  boolean;
+  v_is_seller boolean;
+  v_now_done  boolean;
+begin
+  if v_caller is null then raise exception 'Authentication required'; end if;
+
+  select * into v_offer from offers where id = p_offer_id for update;
+  if v_offer.id is null then raise exception 'Offer not found'; end if;
+  if v_offer.status <> 'accepted' then
+    raise exception 'Offer is not in accepted state (status=%)', v_offer.status;
+  end if;
+
+  select user_id into v_owner from listings where id = v_offer.listing_id;
+  -- Defensive: same NULL-owner guard pattern as accept_offer. A null v_owner
+  -- would make `v_caller = v_owner` evaluate to NULL → v_is_seller would be
+  -- NULL → the participant check below would fail open under three-valued
+  -- logic. FK cascade should make this unreachable, but guard anyway.
+  if v_owner is null then raise exception 'Listing not found'; end if;
+
+  v_is_buyer  := (v_caller = v_offer.buyer_id);
+  v_is_seller := (v_caller = v_owner);
+  if not (v_is_buyer or v_is_seller) then
+    raise exception 'Only trade participants can mark complete';
+  end if;
+
+  if v_is_buyer  then update offers set completed_by_buyer  = true where id = v_offer.id; end if;
+  if v_is_seller then update offers set completed_by_seller = true where id = v_offer.id; end if;
+
+  select (completed_by_buyer and completed_by_seller) into v_now_done
+    from offers where id = v_offer.id;
+
+  if v_now_done then
+    update offers set status = 'completed' where id = v_offer.id;
+    -- Flip listings: in_trade -> sold
+    update listings set status = 'sold' where id = v_offer.listing_id;
+    update listings set status = 'sold'
+      where id in (select listing_id from offer_items where offer_id = v_offer.id);
+
+    -- Notify both
+    insert into notifications (user_id, type, title, body, link)
+      values (v_offer.buyer_id, 'trade_offer_completed',
+              'Trade complete',
+              'Trade marked complete — leave a review.',
+              '/reviews/new?trade=' || v_offer.id),
+             (v_owner, 'trade_offer_completed',
+              'Trade complete',
+              'Trade marked complete — leave a review.',
+              '/reviews/new?trade=' || v_offer.id);
+  end if;
+end;
+$$;
