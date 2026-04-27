@@ -679,32 +679,41 @@ begin
   if new.status not in ('sold', 'expired') then return new; end if;
   if old.status = new.status then return new; end if;
 
-  -- Pending offers ON this listing
+  -- Pending offers ON this listing.
+  -- The `and status = 'pending'` filter on the UPDATE is defensive: if a
+  -- concurrent transaction flipped the offer between our SELECT cursor
+  -- and this UPDATE, we no-op rather than overwrite the other tx's
+  -- decision. Single-tx behavior is unchanged.
   for v_offer_id in
     select id from offers where listing_id = new.id and status = 'pending'
   loop
-    update offers set status = 'auto_passed_listing' where id = v_offer_id;
+    update offers set status = 'auto_passed_listing'
+      where id = v_offer_id and status = 'pending';
     insert into notifications (user_id, type, title, body, link)
       select buyer_id, 'trade_offer_auto_passed',
              'Listing no longer available',
              'Your offer was auto-passed because the listing is no longer active.',
              '/listings/' || new.id
-      from offers where id = v_offer_id;
+      from offers where id = v_offer_id and status = 'auto_passed_listing';
   end loop;
 
-  -- Pending offers that include this listing as an item
+  -- Pending offers that include this listing as an item.
+  -- Same defensive `and status = 'pending'` filter on the UPDATE; the
+  -- notification is gated on the post-update status to avoid emitting
+  -- a notification for an offer the UPDATE no-op'd.
   for v_offer_id in
     select distinct o.id from offers o
     join offer_items oi on oi.offer_id = o.id
     where oi.listing_id = new.id and o.status = 'pending'
   loop
-    update offers set status = 'auto_passed_item_taken' where id = v_offer_id;
+    update offers set status = 'auto_passed_item_taken'
+      where id = v_offer_id and status = 'pending';
     insert into notifications (user_id, type, title, body, link)
       select buyer_id, 'trade_offer_auto_passed',
              'Offered item no longer available',
              'Your offer was auto-passed because an offered item is no longer active.',
              '/trades/' || v_offer_id
-      from offers where id = v_offer_id;
+      from offers where id = v_offer_id and status = 'auto_passed_item_taken';
   end loop;
 
   return new;
